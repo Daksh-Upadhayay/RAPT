@@ -1,0 +1,91 @@
+# ============================================================
+# Python (backend)
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments (uv creates .venv; uv.lock IS committed)
+.venv/
+venv/
+env/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+
+# Testing / coverage / type-checking / linting caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+.hypothesis/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ============================================================
+# Node (frontend)
+# ============================================================
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.pnp.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist-ssr/
+.vite/
+.next/
+out/
+*.tsbuildinfo
+.eslintcache
+
+# ============================================================
+# Environment & secrets
+# ============================================================
+.env
+.env.*
+!.env.example
+*.pem
+
+# ============================================================
+# Logs & local data
+# ============================================================
+# Downloaded source datasets (re-fetched by backend/scripts/build_dataset.py)
+data/raw/
+logs/
+*.log
+*.sqlite3
+*.db
+
+# ============================================================
+# Editors / OS
+# ============================================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

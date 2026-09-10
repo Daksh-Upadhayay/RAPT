@@ -1,0 +1,121 @@
+text,category,urgency
+"Hi there, I ordered a pair of hiking boots on Sunday and the confirmation email said I'd get tracking within 48 hours. It's Tuesday night and nothing yet. Could you check if it's been sent out?",order_status,low
+"Quick q - does order 58817 ship from the US or overseas? Trying to figure out roughly when it'll get here.",order_status,low
+"My account says 'fulfilled' but I got no shipping email. what does fulfilled mean exactly, is it on the way?",order_status,low
+"can u send me the tracking # for my last order, cant find the email anywhere",order_status,low
+"Hello, I placed order #40213 for a standing desk frame. Could you let me know which courier it's going with? I want to make sure someone's home to sign for it.",order_status,low
+"Hey, I bought a gift card and a lamp last week. The gift card showed up by email but the lamp order just says 'awaiting fulfilment'. Is that normal?",order_status,low
+"Is there a way to see an estimated delivery date for order 77120? The order page only shows 'processing'.",order_status,low
+"I ordered two items and only one tracking number came through. Are they shipping separately or is the second one not sent yet?",order_status,low
+"Just wanted to double check my order went through ok. My card was charged $64.20 but I never got the confirmation page, it just spun and timed out.",order_status,medium
+"The tracking link in your email goes to a 404 page. Is there another way to see where my package is?",order_status,medium
+"Order 33918 has shown 'label created' for four days now. Has the carrier actually picked it up? Starting to wonder if it got lost in the warehouse.",order_status,medium
+"Could you confirm whether my order shipped to my old address? I updated it in my profile right after checking out and I'm not sure which one it went to.",order_status,medium
+"Where's my stuff?? Paid for the vacuum on the 3rd, no email, no tracking, nothing. Kind of annoyed.",order_status,medium
+"Checking in on the coffee grinder I ordered. The site shows it as shipped, but the tracking has shown 'pre-transit' for five days. Can someone look into what's happening?",order_status,medium
+"My order status flipped from 'shipped' back to 'processing' this morning. What does that mean? Did something go wrong?",order_status,medium
+"Hi, I got a text saying my parcel is 'held at depot'. I don't recognise the sender. Is this related to my order #19044 with you?",order_status,medium
+"I need to know TODAY whether order 61420 has left your warehouse. If it hasn't I have to buy the part locally because my contractor starts Monday.",order_status,high
+"This is my third email asking for a tracking number. I've had nothing but automated replies. Where is my order?",order_status,high
+"I have a flight on Thursday morning and I ordered the luggage specifically for it. I need an actual answer on whether it will be here by Wednesday - please don't send me the FAQ link again.",order_status,high
+"Your chatbot told me my order doesn't exist, but my bank shows the $219 payment. I want someone real to tell me what's going on with it or I'll dispute the charge.",order_status,high
+"My parcel was due yesterday but I see it's now showing Friday. No big deal, just wanted to check that's the new estimate.",delivery_delay,low
+"Order 22851 was supposed to arrive on the 12th and it's now the 14th. Not in a hurry, just letting you know in case something's wrong.",delivery_delay,low
+"Hello, the delivery window for my rug has moved back twice. Totally understand with the holidays, just want to know if there's a firm date.",delivery_delay,low
+"My package was meant to be here last Thursday. Tracking hasn't moved since it arrived at the regional hub. Can you find out what's holding it up?",delivery_delay,medium
+"Hi, my mattress delivery was scheduled for Saturday between 8 and 12. Nobody showed and I didn't get a call. What's the new date?",delivery_delay,medium
+"It's been a week past the estimated delivery for my blender. I'm getting a bit fed up of checking the tracking page every day.",delivery_delay,medium
+"The courier's site says 'delayed due to operational issues' for order 81123. How long is this likely to take?",delivery_delay,medium
+"My package has been sitting in the Memphis sort facility for 9 days. The delivery date passed on Monday.",delivery_delay,medium
+"Ordered with 2-day shipping, it's been six days. I paid extra for the fast option so I'd like to know what happened.",delivery_delay,medium
+"Still no sign of order 57302. It was estimated for the 3rd. Could you please chase the carrier?",delivery_delay,medium
+"My delivery got pushed to 'pending' with no date at all. I'm a little worried it's lost.",delivery_delay,medium
+"The shoes I ordered were supposed to arrive before my trip, it's now four days late and the tracking just says in transit. Any update?",delivery_delay,medium
+"Package still hasn't arrived and the expected date was over two weeks ago. Tracking literally says the same thing it said on day one.",delivery_delay,medium
+"My order is 10 days late. I've contacted you twice already and the replies just tell me to wait. I want this escalated.",delivery_delay,high
+"The birthday present I ordered was supposed to arrive by the 20th. The party is on Saturday and it's still 'in transit'. I need to know right now if it's going to make it or I'll have to buy something else.",delivery_delay,high
+"THIS IS RIDICULOUS. Three weeks late and nobody can tell me where my order is. I want answers.",delivery_delay,high
+"I've been waiting almost a month for order 30019. At this point I'm going to report this to my credit card company as goods not received.",delivery_delay,high
+"The medication fridge I ordered for my mother is overdue by five days. She needs it to store insulin, please treat this as a priority.",delivery_delay,high
+"This delivery was promised for Monday, it's Thursday, and your support line hung up on me. Absolutely unacceptable.",delivery_delay,high
+"Delivery date passed again. every single day it says 'arriving tomorrow' and it never does. my patience has completely run out, fix it or refund me",delivery_delay,high
+"The mug set arrived today and one of the four mugs has a small chip on the handle. Not a huge deal, but can you send a replacement for just that one?",damaged_item,low
+"Small cosmetic scratch on the side of my new monitor, works fine otherwise. Is there anything you can do? If not, no worries.",damaged_item,low
+"My bookshelf came with one of the side panels split along the grain. I can't assemble it like this. What's the next step?",damaged_item,medium
+"The box was soaked through when it arrived and the cushion covers inside have water stains. Can I get replacements?",damaged_item,medium
+"Hi, the blender jug has a hairline crack near the base. It leaks when I fill it. Order 44810.",damaged_item,medium
+"Unboxed my lamp and the shade is crushed flat. Looks like something heavy was stacked on it in transit.",damaged_item,medium
+"The frame of the bike trainer arrived bent. It wobbles badly when I try to use it.",damaged_item,medium
+"One leg of the dining chair was snapped off when I opened the carton. The other three chairs are fine.",damaged_item,medium
+"The keyboard I got has two keys that were broken off and rattling around in the box.",damaged_item,medium
+"Received the air fryer but the basket handle is cracked and the display is scratched. I'd like an exchange please.",damaged_item,medium
+"I ordered a set of 6 wine glasses, three arrived smashed. There was barely any bubble wrap.",damaged_item,medium
+"The screen on the tablet has a big crack across the top corner. Opened it straight from the delivery box, didn't drop it.",damaged_item,medium
+"My headphones arrived with the headband already snapped. Pretty disappointing for a gift.",damaged_item,medium
+"Got my TV today and the panel is cracked. It was a $900 purchase and I need someone to arrange a collection and replacement immediately.",damaged_item,high
+"The space heater arrived with a dented casing and when I plugged it in it started sparking. I unplugged it straight away. This is dangerous.",damaged_item,high
+"This is the second replacement kettle that has arrived broken. Second one! Your packaging is a joke and I'm done waiting on your 'investigation'.",damaged_item,high
+"The glass tabletop shattered as I lifted it out of the box and I've cut my hand. There were no warnings on the packaging about it being cracked.",damaged_item,high
+"ARRIVED BROKEN. AGAIN. I have emailed three times with photos and nobody has responded.",damaged_item,high
+"The stroller frame is bent and one wheel won't lock. I can't safely use this with my baby and we're travelling on Friday. Please sort out a replacement asap.",damaged_item,high
+"The electric scooter arrived with a cracked battery housing and it smells like burning plastic when charging. I need this collected today, I don't want it in my apartment.",damaged_item,high
+"Hi, what's your refund policy on shoes that have been worn once indoors? They're a bit tight.",refund_request,low
+"I returned a jacket last week via the prepaid label. Just wondering how long refunds usually take to hit the card?",refund_request,low
+"Could the refund for my returned headphones go to store credit instead of my card? Easier for me.",refund_request,low
+"Do I get the shipping cost refunded too if I send back the item, or just the item price?",refund_request,low
+"The planter I bought is a slightly different shade than the photos. Not faulty, just not for me. How do I get my money back?",refund_request,low
+"I noticed I paid full price for my order the day before the sale started. Is there any way to get the difference refunded?",refund_request,low
+"Your warehouse received my return on the 2nd according to tracking, but my refund still says pending. Can you check?",refund_request,medium
+"I was refunded $45 but I paid $62 for the item. Where's the rest of the money?",refund_request,medium
+"My order was cancelled on your end because it was out of stock, but I haven't seen the money come back yet. It's been 8 days.",refund_request,medium
+"I got charged twice for order 30561. The duplicate is still showing on my statement. Please refund one of them.",refund_request,medium
+"The yoga mat doesn't match the description at all - it's much thinner than advertised. I'd like to return it for a full refund.",refund_request,medium
+"I sent back the robot vacuum two weeks ago and haven't heard anything. Is my refund being processed?",refund_request,medium
+"I used a promo code that should have taken 20% off but I was charged full price. Can you refund the difference?",refund_request,medium
+"I've been waiting 5 weeks for a refund of $340. Every time I ask I'm told 'another 3-5 business days'. I'm done being patient. If I don't see it by Friday I'm filing a dispute.",refund_request,high
+"Your return portal accepted my return, the courier collected it, and now you're saying you never got it. I have the proof of delivery. Refund me immediately.",refund_request,high
+"This is the fourth time I am asking about my refund. FOURTH. Nobody replies. I want my money back.",refund_request,high
+"I need the refund for order 72210 processed today - that money was for rent and I was promised it would be back by now.",refund_request,high
+"Absolutely disgusted. You took $180 for an item you've now admitted you never had in stock and I still don't have my money. I'm reporting this to consumer protection.",refund_request,high
+"you charged me for 3 items and sent 1. I want a refund for the other two right now, not a voucher.",refund_request,high
+"It's been over a month since I returned the item. I've been more than patient but this is starting to feel like theft. Please escalate to a manager.",refund_request,high
+"Hi, I placed an order about ten minutes ago and realised I picked the wrong size. Could you cancel it so I can reorder?",cancellation,low
+"Please cancel order 84455, I've decided I don't need it anymore. Thanks!",cancellation,low
+"Is it possible to cancel just one item from my order? I'd like to keep the rest.",cancellation,low
+"Can I cancel a pre-order without being charged? The release date isn't for another two months.",cancellation,low
+"I'd like to cancel my order if it hasn't shipped yet - I found the same thing at a local store. If it's already gone out, no worries, I'll just return it.",cancellation,low
+"Hello, how do I cancel an order? I can't see the option in the app.",cancellation,low
+"My partner ordered the same coffee machine from our shared account, so we've got two. Please cancel order 51290.",cancellation,low
+"Please cancel next month's subscription box order, I'm moving house.",cancellation,low
+"I tried to cancel order 13377 through the website and it gave me an error. It still shows as active. Can you cancel it manually?",cancellation,medium
+"I requested a cancellation yesterday and got no confirmation. Is the order cancelled or not?",cancellation,medium
+"I ordered this by accident - my toddler got hold of my phone. Please cancel before it ships.",cancellation,medium
+"Your site says my order can't be cancelled because it's 'being prepared'. It was placed 20 minutes ago. Please stop it.",cancellation,medium
+"The price dropped $50 right after I bought the chair. I'd rather cancel and reorder than keep paying more.",cancellation,medium
+"I want to cancel order 60081, the delivery estimate is now 3 weeks and that's way too long.",cancellation,medium
+"I've asked twice to cancel this order and it still shipped. I don't want it. Stop it now.",cancellation,high
+"CANCEL MY ORDER. I did not authorise this purchase, someone used my card. I need it stopped immediately.",cancellation,high
+"I need order 22019 cancelled before it leaves the warehouse today - I'm moving tomorrow and the address will be wrong.",cancellation,high
+"Cancel it. Your support has been useless and I've been waiting on hold for an hour. If this ships I'm refusing delivery and disputing the charge.",cancellation,high
+"You charged my card for an order I cancelled within 5 minutes. Cancel it properly and don't make me contact my bank.",cancellation,high
+"I placed a large order by mistake ($1,200 instead of $120 - typed the quantity wrong). Please cancel it urgently before it's charged.",cancellation,high
+"Does the 12-cup coffee maker have an auto shut-off feature?",product_question,low
+"Hi! Is the throw blanket machine washable or dry clean only?",product_question,low
+"What's the max weight capacity of the folding step stool?",product_question,low
+"Do your running shoes run true to size? I'm usually between a 9 and a 9.5.",product_question,low
+"Will the phone case fit a Pixel 8 Pro, or only the regular Pixel 8?",product_question,low
+"is the garden hose kink resistant? my last one was a nightmare",product_question,low
+"Does the smartwatch track sleep without a subscription?",product_question,low
+"Are replacement filters for the air purifier sold separately? I can't find them on the site.",product_question,low
+"Can the desk lamp be dimmed, and what colour temperature is the bulb?",product_question,low
+"I'm thinking of getting the office chair for my husband who's 6'4 - will it be tall enough?",product_question,low
+"Is this the 2024 version of the robot vacuum or the older model? The listing doesn't say.",product_question,low
+"Hello, what's the warranty period on the mechanical keyboard, and does it cover the switches?",product_question,low
+"Could you tell me what the backpack is made of? I'm allergic to latex.",product_question,low
+"Do you know when the large water bottle in navy will be back in stock?",product_question,low
+"I got the camera tripod but the instructions don't explain how to attach the phone mount. Is there a video or a better manual?",product_question,medium
+"The bluetooth speaker won't pair with my laptop, only my phone. Is it compatible with Windows? Nothing in the manual about it.",product_question,medium
+"Your listing says the kettle is 1.7L but the one I received says 1.5L on the box. Which is correct?",product_question,medium
+"Is the blender BPA-free? I bought it for making baby food and the packaging doesn't say anything.",product_question,medium
+"I need to know today if the car seat you sell is certified for use in Canada - we're driving across the border tomorrow morning.",product_question,high
+"Is the space heater safe to leave running overnight? It gets extremely hot on the side and I'm nervous about a fire hazard with the kids around.",product_question,high
