@@ -8,15 +8,16 @@ Each LF votes HIGH, MEDIUM or LOW when it fires; `weak_label` combines the votes
   triggers: "not urgent" matches `time_pressure`, and "no big deal" reads as negative
   sentiment
 - HIGH   if any *strong* HIGH rule fires (deadline, threat, repeat contact, safety,
-         hardship, profanity), or two weak HIGH rules fire, or a weak HIGH rule fires
+         hardship, fraud/privacy, money lost, profanity), or two weak HIGH rules fire, or a weak HIGH rule fires
          alongside a MEDIUM rule
 - MEDIUM if a single weak HIGH rule or any MEDIUM rule fires
 - LOW    otherwise: no urgency signal found
 
 The rules are deliberately simple and noisy. The model trained on them sees the full
 text, so it can generalise past the exact keywords. The rule set was revised for
-urgency v3 using the 170-ticket human-labelled dev set (DECISIONS.md, Phase 2); v1 and
-v2 were trained on the earlier rules.
+urgency v3 using the 170-ticket human-labelled dev set, and for v4 to cover calm but
+high-stakes tickets (fraud, subtle safety risks, calm deadlines, lost money); see
+DECISIONS.md, Phase 2. Earlier versions were trained on the rules as they were then.
 """
 
 import re
@@ -43,6 +44,11 @@ def _matches(pattern: str) -> Callable[[str], bool]:
 
 
 _WEEKDAY = r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)"
+_EVENT = (
+    r"\b(flight|surgery|operation|exam|wedding|funeral|interview|appointment|trip|move|moving|contractor"
+    r"|job|shift|party|ceremony|visa|court|deadline|launch)"
+)
+_SOON = rf"(today|tonight|tomorrow|this (morning|afternoon|evening|weekend)|in the morning|on {_WEEKDAY})"
 # Carrier names and common acronyms that are written in caps without shouting
 _ACRONYMS = {"UPS", "USPS", "DHL", "ETA", "FAQ", "USB", "LED", "BPA", "FEDEX", "PDF", "ORD"}
 _WORD = re.compile(r"[A-Za-z]{3,}")
@@ -68,6 +74,8 @@ LABELING_FUNCTIONS: tuple[LabelingFunction, ...] = (
             r"|\b(today|tonight)\b.{0,20}\b(or|otherwise)\b"
             r"|\bneed\b.{0,60}\b(today|tonight|tomorrow)\b|\b(tomorrow|tonight) (morning|evening|night)\b"
             r"|\bbefore (my|our|the) \w+ (tomorrow|tonight)\b"
+            # an event with a near date, stated calmly: "I have a flight tomorrow and ..."
+            rf"|{_EVENT}\b.{{0,40}}\b{_SOON}\b|\b{_SOON}\b.{{0,40}}{_EVENT}\b"
         ),
         strong=True,
     ),
@@ -103,6 +111,8 @@ LABELING_FUNCTIONS: tuple[LabelingFunction, ...] = (
             r"\bfire\b|\bsmok(e|ing)\b|\bspark(s|ing)?\b|\bburn(ed|t|ing)\b|electric(al)? shock"
             r"|\binjur|\bhurt (me|my|him|her|them)|\bdangerous\b|\bhazard|\bmelt(ed|ing)\b|\bchok(e|ing)\b"
             r"|\bmou?ld(y)?\b|\bunsafe\b|\btoxic\b|is (it|this) safe|allergic reaction|\bpoison"
+            r"|(warm|hot) to the touch|overheat|\ballerg(en|y|ic)|\bfrayed\b|\brecall(ed)?\b|chemical smell"
+            r"|exposed wir|wir(e|es|ing) (is |are )?exposed|(doesn'?t|won'?t|does not|will not) (latch|lock|click|hold)|glass (in|inside)"
         ),
         strong=True,
     ),
@@ -111,7 +121,29 @@ LABELING_FUNCTIONS: tuple[LabelingFunction, ...] = (
         HIGH,
         _matches(
             r"\brent\b|\bbounced\b|overdrawn|can'?t afford|my bills|\bmedication\b|\binsulin\b|prescription"
-            r"|\bmedical\b|\bhospital\b|\bdisabled\b|\bnewborn\b|wheelchair|\boxygen\b"
+            r"|\bmedical\b|\bhospital\b|\bdisabled\b|\bnewborn\b|wheelchair|\boxygen\b|hearing aid"
+        ),
+        strong=True,
+    ),
+    LabelingFunction(
+        "fraud_or_privacy",
+        HIGH,
+        _matches(
+            r"unauthori[sz]ed|(didn'?t|did not|never) (make|made|place|placed|authori[sz]ed?|order|ordered)\b|with my card"
+            r"|(don'?t|do not) recogni[sz]e (this|the|a|that) (charge|payment|order|transaction)"
+            r"|\bhacked\b|stolen card|someone (else )?(used|placed|has) (my|an order)"
+            r"|(another|other|someone else'?s?) customer'?s? (name|address|details|order)|data breach"
+            r"|my (personal )?(details|information|address) (is|are|was|were) (visible|exposed|leaked|shown)"
+        ),
+        strong=True,
+    ),
+    LabelingFunction(
+        "money_lost",
+        HIGH,
+        _matches(
+            r"wrong (bank )?account|closed account|money (is |has )?(gone|missing|disappeared|vanished)"
+            r"|missing (that|the|my) money|charged but (the )?(order|nothing)|balance (has )?(disappeared|vanished|gone)"
+            r"|out of pocket|left my account"
         ),
         strong=True,
     ),

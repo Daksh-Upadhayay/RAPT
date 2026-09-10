@@ -27,6 +27,7 @@ DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 DATASET_PATH = DATA_DIR / "processed" / "tickets.csv"
 HANDWRITTEN_PATH = DATA_DIR / "eval" / "handwritten_test_set.csv"
 URGENCY_HOLDOUT_PATH = DATA_DIR / "eval" / "urgency_holdout_test.csv"
+URGENCY_FRESH_PATH = DATA_DIR / "eval" / "urgency_fresh_test.csv"
 SEED = 42
 CONFIDENCE_THRESHOLD = 0.6  # the Escalation Agent's cut-off (03-agent-architecture.md)
 
@@ -50,22 +51,37 @@ def load_urgency_dev() -> pd.DataFrame:
     return pd.concat(parts, ignore_index=True)
 
 
+def load_urgency_human() -> pd.DataFrame:
+    """Every human urgency label we have (from urgency v4 on): the dev set plus the fresh
+    set that chose v3. Used as training data with cross-validation, so none of it is a
+    clean test any more; v4 needs a new fresh set."""
+    dev = load_urgency_dev().assign(source="dev")
+    fresh = pd.read_csv(URGENCY_FRESH_PATH)[["text", "urgency"]].assign(source="fresh_v3")
+    return pd.concat([dev, fresh], ignore_index=True)
+
+
 def tune_class_weights(
-    proba: np.ndarray, y_true: Sequence[str], classes: list[str], grid: Sequence[float] = (0.6, 0.8, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0)
+    proba: np.ndarray,
+    y_true: Sequence[str],
+    classes: list[str],
+    grid: Sequence[float] = (0.6, 0.8, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0),
+    min_last_recall: float = 0.0,
 ) -> tuple[tuple[float, ...], float]:
     """Pick per-class probability multipliers (first class fixed at 1) that maximise
-    macro-F1. Ties go to higher recall on the last class (`high`), then to the weights
-    closest to 1."""
+    macro-F1 among the settings whose recall on the last class (`high`) is at least
+    `min_last_recall`; if none reach it, the highest recall wins. Ties go to higher
+    last-class recall, then to the weights closest to 1."""
     best_key, best = None, None
     for rest in itertools.product(grid, repeat=len(classes) - 1):
         weights = (1.0, *rest)
         y_pred = [classes[i] for i in (proba * np.asarray(weights)).argmax(axis=1)]
         f1 = f1_score(y_true, y_pred, labels=classes, average="macro", zero_division=0)
         last_recall = recall_score(y_true, y_pred, labels=[classes[-1]], average="macro", zero_division=0)
-        key = (round(f1, 4), round(last_recall, 4), -sum(abs(w - 1) for w in weights))
+        feasible = last_recall >= min_last_recall
+        key = (feasible, round(f1, 4) if feasible else 0.0, round(last_recall, 4), -sum(abs(w - 1) for w in weights))
         if best_key is None or key > best_key:
             best_key, best = key, weights
-    return best, best_key[0]
+    return best, best_key[1]
 
 
 def file_sha256(path: Path) -> str:

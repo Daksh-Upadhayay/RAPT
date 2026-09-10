@@ -49,3 +49,22 @@ def test_weak_label_reports_which_rules_fired() -> None:
 )
 def test_weak_label_v3_rules(text: str, expected: TicketUrgency) -> None:
     assert weak_label(text).label is expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # calm but high-stakes (v4): no anger, the situation is what makes them urgent
+        "I have a flight tomorrow and the adapter never arrived.",
+        "The outlet on the power strip feels warm to the touch.",
+        "There's a charge on my card from you that I didn't make.",
+        "My refund went to a closed account.",
+        "The confirmation email shows another customer's name and address.",
+    ],
+)
+def test_weak_label_calm_high_stakes(text: str) -> None:
+    assert weak_label(text).label is TicketUrgency.HIGH
+
+
+def test_trip_months_away_is_not_a_deadline() -> None:
+    assert weak_label("Just wondering when my trip gear ships, the trip is in August.").label is TicketUrgency.LOW

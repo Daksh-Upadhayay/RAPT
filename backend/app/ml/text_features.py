@@ -80,9 +80,24 @@ def _sentence_model(model_name: str):
         return SentenceTransformer(model_name)  # first run: download the weights
 
 
+_EMBED_CACHE: dict[tuple[str, str], np.ndarray] = {}
+_EMBED_CACHE_MAX = 50_000  # ~75 MB of 384-d vectors; cleared when full
+
+
 def embed(texts: list[str], model_name: str) -> np.ndarray:
-    """Unit-length sentence embeddings, one row per text."""
-    return _sentence_model(model_name).encode(texts, batch_size=64, normalize_embeddings=True, show_progress_bar=False)
+    """Unit-length sentence embeddings, one row per text.
+
+    Cached per text: training (cross-validation especially) embeds the same texts many times.
+    """
+    missing = list(dict.fromkeys(t for t in texts if (model_name, t) not in _EMBED_CACHE))
+    if missing:
+        if len(_EMBED_CACHE) + len(missing) > _EMBED_CACHE_MAX:
+            _EMBED_CACHE.clear()
+        vectors = _sentence_model(model_name).encode(
+            missing, batch_size=64, normalize_embeddings=True, show_progress_bar=False
+        )
+        _EMBED_CACHE.update(((model_name, t), v) for t, v in zip(missing, vectors, strict=True))
+    return np.stack([_EMBED_CACHE[(model_name, t)] for t in texts])
 
 
 class SentenceEmbeddings(BaseEstimator, TransformerMixin):

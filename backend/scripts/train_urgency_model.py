@@ -1,49 +1,53 @@
-"""Train the urgency classifier with weak supervision.
+"""Train the urgency classifier: weak supervision + human labels (v4 procedure).
 
-1. Label every row of the dataset (default data/processed/urgency_tickets.csv, built by
-   scripts/build_urgency_dataset.py) with the keyword/heuristic rules in
-   app/ml/weak_labels.py (no human urgency labels exist for this data).
-2. Train four candidates on the train split's weak labels: {TF-IDF + tone features,
-   TF-IDF + tone + sentence embeddings} x {logistic regression, XGBoost}. Each family's
-   hyperparameters (C, tree depth/count) are tuned on the weak-labelled val split.
-3. Pick the candidate with the best macro-F1 on the human-labelled dev set
-   (scripts.ml_training.load_urgency_dev). Then tune per-class probability weights on
-   the same dev set, so the model trades a few extra `medium`/`high` calls for fewer
-   missed ones.
-4. Save app/ml/artifacts/urgency_classifier/<version>/{model.joblib, metrics.json, report.md}
+1. Label every row of the urgency corpus (data/processed/urgency_tickets.csv, built by
+   scripts/build_urgency_dataset.py) with the rules in app/ml/weak_labels.py.
+2. Add every human-labelled ticket we have (scripts.ml_training.load_urgency_human, 234
+   rows) to the training data, weighted up by `human_weight`.
+3. Features: TF-IDF word 1-2-grams + tone features + sentence embeddings (MiniLM), then
+   logistic regression. That combination won on human labels for v3.
+4. 5-fold cross-validation over the human tickets picks `human_weight` (0 means weak
+   labels only, like v3). Each fold trains on the weak train split plus the other human
+   folds and predicts the held-out human fold. The class weights are then tuned on the
+   out-of-fold predictions: best macro-F1 among settings that keep high recall
+   >= MIN_HIGH_RECALL, because a missed high ticket costs more than a false alarm.
+5. The final model trains on the weak train split plus all human tickets.
 
-The dev set is used for choices here, so its scores are optimistic. The real number comes
-from a fresh set scored once with scripts/evaluate_model.py after training.
+Every human label is now used in training, so the cross-validated scores are the only
+human-label numbers here, and slightly optimistic (the rules were revised while reading
+these tickets). The real number comes from a new fresh set scored once with
+scripts/evaluate_model.py.
 
-Version history: v1 = XGBoost on tickets.csv; v2 = val-selected LogReg on
-urgency_tickets.csv; v3 = this script (revised rules, embeddings, dev-set selection).
+Earlier procedures: v3 (weak labels only, dev-set selection) is at commit 6271db2.
 
 Usage (from backend/):
-    uv run python -m scripts.train_urgency_model --version v3
+    uv run python -m scripts.train_urgency_model --version v4
 """
 
 import argparse
 from collections import Counter
-from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.pipeline import FeatureUnion
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold
+from sklearn.pipeline import FeatureUnion, Pipeline
 
 from app.core.enums import ModelName, TicketUrgency
-from app.ml.store import ModelBundle
+from app.ml.store import ModelBundle, load_bundle
 from app.ml.text_features import SentenceEmbeddings, ToneFeatures, normalize_text
 from app.ml.weak_labels import LABELING_FUNCTIONS, weak_label
 from scripts.build_urgency_dataset import OUTPUT_PATH as URGENCY_DATASET_PATH
 from scripts.ml_training import (
+    SEED,
+    URGENCY_FRESH_PATH,
     URGENCY_HOLDOUT_PATH,
-    Trained,
     ensure_new_version,
     evaluate,
     file_sha256,
     load_splits,
-    load_urgency_dev,
+    load_urgency_human,
     md_confidence,
     md_confusion,
     md_errors,
@@ -52,37 +56,45 @@ from scripts.ml_training import (
     metadata,
     save_outputs,
     top_coefficients,
-    top_features,
-    train_logreg,
-    train_xgboost,
     tune_class_weights,
 )
 
 MODEL = ModelName.URGENCY_CLASSIFIER
 CLASSES = [str(u) for u in TicketUrgency]
+C = 2.0  # chosen on val for the same features in v3
+HUMAN_WEIGHTS = (0, 3, 10, 30, 100)
+# Missing a high ticket costs more than over-flagging one: class weights must keep high
+# recall at or above this (cross-validated), then maximise macro-F1
+MIN_HIGH_RECALL = 0.85
+N_FOLDS = 5
 
 
-def tfidf_tone() -> FeatureUnion:
+def make_features() -> FeatureUnion:
     return FeatureUnion(
         [
             ("word", TfidfVectorizer(preprocessor=normalize_text, ngram_range=(1, 2), min_df=2, sublinear_tf=True)),
             ("tone", ToneFeatures()),
+            ("emb", SentenceEmbeddings()),
         ]
     )
 
 
-def tfidf_tone_embeddings() -> FeatureUnion:
-    return FeatureUnion([*tfidf_tone().transformer_list, ("emb", SentenceEmbeddings())])
+def fit(texts: list[str], labels: list[str], weights: np.ndarray) -> Pipeline:
+    pipeline = Pipeline(
+        [("features", make_features()), ("clf", LogisticRegression(C=C, class_weight="balanced", max_iter=5000))]
+    )
+    # Integer labels in CLASSES order, so predict_proba columns line up with CLASSES
+    return pipeline.fit(texts, [CLASSES.index(label) for label in labels], clf__sample_weight=weights)
 
 
-FEATURE_SETS: dict[str, Callable[[], FeatureUnion]] = {
-    "tfidf+tone": tfidf_tone,
-    "tfidf+tone+emb": tfidf_tone_embeddings,
-}
-
-
-def encode(labels) -> np.ndarray:
-    return np.array([CLASSES.index(label) for label in labels])
+def training_rows(weak_texts, weak_labels, human_texts, human_labels, human_weight: float):
+    """Weak rows at weight 1, human rows at `human_weight` (dropped when it is 0)."""
+    if human_weight == 0:
+        return list(weak_texts), list(weak_labels), np.ones(len(weak_texts))
+    texts = [*weak_texts, *human_texts]
+    labels = [*weak_labels, *human_labels]
+    weights = np.concatenate([np.ones(len(weak_texts)), np.full(len(human_texts), float(human_weight))])
+    return texts, labels, weights
 
 
 def md_lf_coverage(texts) -> str:
@@ -99,7 +111,7 @@ def md_lf_coverage(texts) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--version", required=True)
-    parser.add_argument("--dataset", type=Path, default=URGENCY_DATASET_PATH, help="v1 used data/processed/tickets.csv")
+    parser.add_argument("--dataset", type=Path, default=URGENCY_DATASET_PATH)
     parser.add_argument("--force", action="store_true", help="overwrite an existing version")
     args = parser.parse_args()
     out_dir = ensure_new_version(MODEL, args.version, args.force)
@@ -107,108 +119,102 @@ def main() -> None:
     splits = load_splits(args.dataset)
     for df in splits.values():
         df["urgency_weak"] = [str(weak_label(t).label) for t in df["text"]]
-    dev = load_urgency_dev()
-    dev_texts, dev_true = dev["text"].tolist(), dev["urgency"].tolist()
-    data = {name: (df["text"].tolist(), encode(df["urgency_weak"])) for name, df in splits.items()}
-    train_dist = Counter(splits["train"]["urgency_weak"])
-    print("Weak label distribution (train):", dict(train_dist))
+    weak_texts, weak_labels = splits["train"]["text"].tolist(), splits["train"]["urgency_weak"].tolist()
+    human = load_urgency_human()
+    h_texts, h_labels = human["text"].tolist(), human["urgency"].tolist()
+    train_dist = Counter(weak_labels)
+    print(f"Weak train rows: {len(weak_texts)} {dict(train_dist)}; human rows: {len(human)} {dict(Counter(h_labels))}")
 
-    candidates: dict[str, Trained] = {}
-    for feature_name, make_features in FEATURE_SETS.items():
-        print(f"Training LogReg / XGBoost on {feature_name} ...")
-        candidates[f"LogReg {feature_name}"] = train_logreg(make_features(), data["train"], data["val"], balance_classes=True)
-        candidates[f"XGBoost {feature_name}"] = train_xgboost(make_features(), data["train"], data["val"], balance_classes=True)
+    # --- cross-validation over the human tickets ---------------------------------------
+    folds = list(StratifiedKFold(N_FOLDS, shuffle=True, random_state=SEED).split(h_texts, h_labels))
+    oof = {w: np.zeros((len(human), len(CLASSES))) for w in HUMAN_WEIGHTS}
+    for k, (tr, te) in enumerate(folds, 1):
+        for w in HUMAN_WEIGHTS:
+            texts, labels, weights = training_rows(
+                weak_texts, weak_labels, [h_texts[i] for i in tr], [h_labels[i] for i in tr], w
+            )
+            oof[w][te] = fit(texts, labels, weights).predict_proba([h_texts[i] for i in te])
+        print(f"  fold {k}/{N_FOLDS} done")
 
-    eval_sets = {
-        "val (weak)": (splits["val"]["text"].tolist(), splits["val"]["urgency_weak"].tolist()),
-        "test (weak)": (splits["test"]["text"].tolist(), splits["test"]["urgency_weak"].tolist()),
-        "dev (human)": (dev_texts, dev_true),
+    cv_results, cv_f1 = {}, {}
+    for w in HUMAN_WEIGHTS:
+        result = evaluate(h_labels, [CLASSES[i] for i in oof[w].argmax(axis=1)], CLASSES, oof[w].max(axis=1))
+        cv_results[f"human weight {w}" + (" (weak labels only)" if w == 0 else "")] = {"human CV": result}
+        cv_f1[w] = result["macro_f1"]
+        print(f"  human weight {w}: CV macro-F1 {cv_f1[w]:.3f}")
+    best_w = max(HUMAN_WEIGHTS, key=cv_f1.get)
+    class_weights, _ = tune_class_weights(oof[best_w], h_labels, CLASSES, min_last_recall=MIN_HIGH_RECALL)
+    weighted_scores = oof[best_w] * np.asarray(class_weights)
+    cv_pred = [CLASSES[i] for i in weighted_scores.argmax(axis=1)]
+    cv_conf = oof[best_w][np.arange(len(human)), weighted_scores.argmax(axis=1)]
+    shipped = f"human weight {best_w} + class weights"
+    cv_results[shipped] = {"human CV": evaluate(h_labels, cv_pred, CLASSES, cv_conf)}
+    print(f"Chose human weight {best_w}, class weights {class_weights}")
+
+    # Context: the previous model and the rules on the same tickets (not a fair test for v3:
+    # 170 of these tuned it and the other 64 chose it)
+    v3 = load_bundle(MODEL, "v3")
+    v3_pred, v3_conf = v3.predict_many(h_texts)
+    context = {
+        "v3 (served before)": evaluate(h_labels, v3_pred, CLASSES, v3_conf),
+        "rules alone": evaluate(h_labels, [str(weak_label(t).label) for t in h_texts], CLASSES),
     }
-    results: dict[str, dict[str, dict]] = {}
-    for name, trained in candidates.items():
-        bundle = ModelBundle(trained.pipeline, CLASSES, args.version)
-        results[name] = {}
-        for set_name, (texts, y_true) in eval_sets.items():
-            y_pred, conf = bundle.predict_many(texts)
-            results[name][set_name] = evaluate(y_true, y_pred, CLASSES, conf)
-        print(f"  {name}: dev macro-F1 {results[name]['dev (human)']['macro_f1']:.3f}")
 
-    # Choose on human labels, then tune the decision weights on the same dev set
-    shipped = max(candidates, key=lambda n: results[n]["dev (human)"]["macro_f1"])
-    dev_proba = candidates[shipped].pipeline.predict_proba(dev_texts)
-    weights, tuned_f1 = tune_class_weights(dev_proba, dev_true, CLASSES)
-    bundle = ModelBundle(candidates[shipped].pipeline, CLASSES, args.version, class_weights=weights)
-    print(f"Shipping {shipped} with class weights {dict(zip(CLASSES, weights, strict=True))} (dev macro-F1 {tuned_f1:.3f})")
+    # --- final model: weak train + all human tickets -----------------------------------
+    texts, labels, weights = training_rows(weak_texts, weak_labels, h_texts, h_labels, best_w)
+    final = fit(texts, labels, weights)
+    bundle = ModelBundle(final, CLASSES, args.version, class_weights=class_weights)
+    weak_eval = {}
+    for name in ("val", "test"):
+        y_pred, conf = bundle.predict_many(splits[name]["text"].tolist())
+        weak_eval[f"{name} (weak)"] = evaluate(splits[name]["urgency_weak"].tolist(), y_pred, CLASSES, conf)
 
-    final_name = f"{shipped} + weights"
-    results[final_name] = {}
-    final_preds = {}
-    for set_name, (texts, y_true) in eval_sets.items():
-        y_pred, conf = bundle.predict_many(texts)
-        final_preds[set_name] = (y_pred, conf)
-        results[final_name][set_name] = evaluate(y_true, y_pred, CLASSES, conf)
-    rules_dev = evaluate(dev_true, [str(weak_label(t).label) for t in dev_texts], CLASSES)
-
-    fr = results[final_name]
-    dev_pred, dev_conf = final_preds["dev (human)"]
-    shipped_pipeline = candidates[shipped].pipeline
-    if shipped.startswith("XGBoost"):
-        features_md = ", ".join(f"`{name}`" for name, _ in top_features(shipped_pipeline))
-    else:
-        features_md = "\n".join(
-            f"- **{c}**: " + ", ".join(f"`{f}`" for f in feats)
-            for c, feats in top_coefficients(shipped_pipeline, CLASSES).items()
-        )
-    selection_lines = [f"- **{name}** (val-tuned params): {t.selection}" for name, t in candidates.items()]
-
+    best = cv_results[shipped]["human CV"]
     report = f"""# Urgency classifier {args.version}
 
-Weak supervision: keyword/heuristic rules (`app/ml/weak_labels.py`) label the training
-data (`{args.dataset.name}`), then four candidates learn from those labels:
-TF-IDF word 1-2-grams + tone features (VADER, caps, `!`/`?`, length), with or without
-sentence embeddings (`all-MiniLM-L6-v2`), each through logistic regression and XGBoost.
-The best candidate on the **human-labelled dev set** ({len(dev)} tickets) is shipped,
-with per-class probability weights tuned on the same dev set:
+Weak supervision **plus human labels**: the rules (`app/ml/weak_labels.py`) label the
+{len(weak_texts)}-row train split of `{args.dataset.name}`, and all {len(human)} human-labelled
+tickets are added with weight ×{best_w}. Features: TF-IDF word 1-2-grams + tone features +
+MiniLM sentence embeddings → logistic regression (C={C}, balanced classes).
+Class weights: {", ".join(f"{c} ×{w}" for c, w in zip(CLASSES, class_weights, strict=True))}, tuned for the best
+macro-F1 that keeps cross-validated high recall ≥ {MIN_HIGH_RECALL}.
 
-**Shipped: {shipped}**, class weights {", ".join(f"{c} ×{w}" for c, w in zip(CLASSES, weights, strict=True))}.
+Weak label distribution (train): {", ".join(f"{c} {train_dist[c]} ({train_dist[c] / len(weak_texts):.0%})" for c in CLASSES)}.
+Human tickets: {", ".join(f"{c} {n}" for c, n in Counter(h_labels).items())}.
 
-Weak label distribution (train, {len(splits["train"])} rows):
-{", ".join(f"{c} {train_dist[c]} ({train_dist[c] / len(splits["train"]):.0%})" for c in CLASSES)}.
+## Human-label cross-validation ({N_FOLDS}-fold)
 
-## Summary
+Each human ticket is predicted by a model that never saw it. Human weight 0 = weak labels
+only (the v3 recipe, on the v4 corpus and rules).
 
-{md_summary(results)}
+{md_summary(cv_results)}
 
-**Rules alone on the dev set:** macro-F1 {rules_dev["macro_f1"]:.2f} / accuracy {rules_dev["accuracy"]:.2f}.
+Context on the same {len(human)} tickets (**not** a fair test: v3 was tuned on 170 of them and
+chosen on the other 64):
 
-- **val / test (weak)**: agreement with the rules' labels on held-out data. This measures
-  how well a model *learned the rules*.
-- **dev (human)**: human labels. The rules were revised on this set and the model and
-  class weights were chosen on it, so **all dev numbers (rules included) are optimistic**.
-  They are for comparing candidates, not for reporting.
-- **The real number** comes from a fresh set scored once with `scripts/evaluate_model.py`.
+{md_summary({k: {"human": v} for k, v in context.items()})}
 
-## Shipped model: dev set (human labels)
+**Caveats:** the rules were revised while reading these tickets, and the class weights
+were tuned on the same out-of-fold predictions, so the CV numbers are somewhat optimistic.
+The real number comes from a new fresh set scored once with `scripts/evaluate_model.py`.
 
-{md_per_class(fr["dev (human)"])}
+## Shipped recipe — cross-validated per class
 
-{md_confusion(fr["dev (human)"], CLASSES)}
+{md_per_class(best)}
 
-### Rules alone
+{md_confusion(best, CLASSES)}
 
-{md_per_class(rules_dev)}
+### Tickets it got wrong (out-of-fold)
 
-{md_confusion(rules_dev, CLASSES)}
-
-### Tickets the shipped model got wrong
-
-{md_errors(dev_texts, dev_true, dev_pred, dev_conf, limit=40)}
+{md_errors(h_texts, h_labels, cv_pred, cv_conf, limit=40)}
 
 ## Confidence vs. the 0.6 escalation threshold
 
-Confidence is the model's own probability for the chosen label (before class weights).
+{md_confidence({"human CV": best, **{k: v for k, v in weak_eval.items() if k.startswith("test")}})}
 
-{md_confidence({k: fr[k] for k in ("test (weak)", "dev (human)")})}
+## Final model vs weak labels (held-out corpus splits)
+
+{md_summary({"final model": weak_eval})}
 
 ## Labeling functions
 
@@ -216,36 +222,39 @@ Confidence is the model's own probability for the chosen label (before class wei
 HIGH rule fires, two weak HIGH rules fire, or a weak HIGH rule fires together with a
 MEDIUM rule; MEDIUM if one weak HIGH or any MEDIUM rule fires; otherwise LOW.
 
-{md_lf_coverage(splits["train"]["text"])}
+{md_lf_coverage(weak_texts)}
 
-## Hyperparameter selection (weak val)
+## Features pushing hardest towards each class
 
-{chr(10).join(selection_lines)}
-
-## Most useful features ({shipped})
-
-{features_md}
+{chr(10).join(f"- **{c}**: " + ", ".join(f"`{f}`" for f in feats) for c, feats in top_coefficients(final, CLASSES).items())}
 """
     metrics = {
         "model": str(MODEL),
         "version": args.version,
         "classes": CLASSES,
-        "shipped": shipped,
-        "class_weights": dict(zip(CLASSES, weights, strict=True)),
-        "params": {k: v for k, v in candidates[shipped].params.items() if k != "n_jobs"},
-        "selection": {name: t.selection for name, t in candidates.items()},
+        "C": C,
+        "human_weight": best_w,
+        "class_weights": dict(zip(CLASSES, class_weights, strict=True)),
+        "min_high_recall": MIN_HIGH_RECALL,
+        "cv_results": cv_results,
+        "context_on_human_tickets": context,
+        "weak_eval": weak_eval,
         "weak_label_distribution_train": dict(train_dist),
-        "results": results | {"Rules alone": {"dev (human)": rules_dev}},
         "metadata": metadata(
             args.dataset,
-            {"n_train": len(splits["train"]), "n_dev": len(dev), "holdout_sha256": file_sha256(URGENCY_HOLDOUT_PATH)},
+            {
+                "n_weak_train": len(weak_texts),
+                "n_human": len(human),
+                "holdout_sha256": file_sha256(URGENCY_HOLDOUT_PATH),
+                "fresh_v3_sha256": file_sha256(URGENCY_FRESH_PATH),
+            },
         ),
     }
     save_outputs(out_dir, MODEL, bundle, metrics, report)
 
-    print(md_summary(results))
-    print(f"Rules alone on dev: macro-F1 {rules_dev['macro_f1']:.2f} / acc {rules_dev['accuracy']:.2f}")
-    print(f"\nSaved {shipped} to {out_dir}")
+    print(md_summary(cv_results))
+    print(md_summary({k: {"human": v} for k, v in context.items()}))
+    print(f"\nSaved to {out_dir}")
 
 
 if __name__ == "__main__":

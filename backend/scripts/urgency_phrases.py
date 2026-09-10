@@ -1,10 +1,11 @@
-"""Compositional urgency phrasing for the urgency training corpus (v2).
+"""Compositional urgency phrasing for the urgency training corpus (v2+).
 
 v1 took all its urgency signal from ~45 fixed tone sentences, and the model memorised
 them instead of learning urgency. Here each urgency *kind* (deadline, repeat contact,
 threat, safety, anger, money, impact, frustration, calm) is built from slot-filled
 pieces, giving thousands of distinct phrasings, and an urgent ticket usually carries
-two or three of them.
+two or three of them. Since v4 there are also calm but high-stakes situations (fraud,
+subtle safety risks, calm deadlines, lost money, essential needs) in a neutral voice.
 
 Two properties matter for weak supervision:
 - Many phrasings avoid the keywords in app/ml/weak_labels.py. The rules miss those, so
@@ -13,7 +14,7 @@ Two properties matter for weak supervision:
   because of one phrase, the model also sees the phrases next to it, which is how it
   can learn to generalise past the rules.
 
-The rules in weak_labels.py were not changed for v2: only the text they label changed.
+For v2 only the text changed, not the rules. v3 and v4 revised both (DECISIONS.md, Phase 2).
 """
 
 import random
@@ -122,6 +123,76 @@ def impact(rng: random.Random) -> str:
     ])
 
 
+# --- calm but high-stakes kinds (v4) ----------------------------------------------------
+# v3 learned "high = angry": every high example got its urgency from tone. These state a
+# serious situation in a neutral voice, so the model learns that stakes, not tone, make a
+# ticket high. They are used without anger, threats or exclamation marks.
+
+
+def calm_deadline(rng: random.Random) -> str:
+    event = _pick(rng, [
+        "I have a flight", "My surgery is", "My exam is", "The wedding is", "My new job starts", "We move house",
+        "The funeral is", "My visa appointment is", "The contractor comes", "Our camping trip starts",
+        "The ceremony is", "My shift starts", "The party is",
+    ])
+    when = _pick(rng, ["tomorrow", "tonight", "this afternoon", "tomorrow morning", f"on {_pick(rng, WEEKDAYS)}", "this weekend"])
+    tail = _pick(rng, [
+        "and I still don't have it.", "and this was the one thing I needed for it.",
+        "so I'm not sure what to do if it doesn't come.", "and it hasn't been dispatched yet.",
+        "and without it I can't go ahead.", "so the timing really matters.",
+    ])
+    return f"{event} {when} {tail}"
+
+
+def fraud_or_privacy(rng: random.Random) -> str:
+    return _pick(rng, [
+        f"There's a charge of ${rng.randint(20, 900)} on my card from you that I didn't make.",
+        "I don't recognise this payment on my statement.", "Someone else seems to have placed an order with my card.",
+        "I think my account was hacked, there are orders in it I never placed.",
+        "The confirmation email shows another customer's name and address.",
+        "My address is visible to anyone with the order link.", "My card was used for an order I didn't authorise.",
+        "I got a delivery notification for an order I never made.",
+    ])
+
+
+def subtle_safety(rng: random.Random) -> str:
+    return _pick(rng, [
+        "The plug gets warm to the touch after a few minutes.", "The label lists an allergen that wasn't in the description.",
+        "One of the straps is frayed and I was planning to use it for climbing.",
+        "I've just read there's a recall on this model.", "The baby gate doesn't latch properly.",
+        "The car seat buckle doesn't click into place.", "There's a strong chemical smell coming from it.",
+        "Some of the wiring is exposed near the switch.", "I found a small piece of glass inside the container.",
+        "The helmet has a crack in the shell.", "The charger overheats while the phone is plugged in.",
+        "The bike brakes don't hold on a slope.",
+    ])
+
+
+def money_lost(rng: random.Random) -> str:
+    amount = rng.randint(40, 1200)
+    return _pick(rng, [
+        "The refund went to a closed account.", f"My ${amount} refund was sent to the wrong account.",
+        "I was charged but the order never appeared in my account.", "My gift card balance has disappeared.",
+        f"The ${amount} left my account but you say no payment was received.",
+        f"I'm now ${amount} out of pocket and the money hasn't come back.",
+    ])
+
+
+def essential_need(rng: random.Random) -> str:
+    return _pick(rng, [
+        "It's a replacement part for my dad's oxygen machine.", "It's the cooler I use for my insulin.",
+        "It's the charger for my hearing aids and they're nearly flat.", "It's for my wheelchair.",
+        "It's the only baby monitor we have for our newborn.", "It's my daughter's prescription glasses.",
+    ])
+
+
+def blocked_access(rng: random.Random) -> str:
+    return _pick(rng, [
+        "I'm locked out of my account and need to change the address before it ships tonight.",
+        "The site won't let me log in and the order goes out tomorrow with the wrong address.",
+        "My password reset emails aren't arriving and I need to cancel before it's dispatched today.",
+    ])
+
+
 # --- MEDIUM kinds -----------------------------------------------------------------------
 
 
@@ -165,8 +236,10 @@ def calm(rng: random.Random) -> str:
 
 
 HIGH_KINDS = [deadline, repeat_contact, threat, safety, anger, money, impact]
+STAKES_KINDS = [calm_deadline, fraud_or_privacy, subtle_safety, money_lost, essential_need, blocked_access]
 MEDIUM_KINDS = [frustration, inconvenience, action_request]
-LEVEL_WEIGHTS = {"none": 30, "calm": 15, "medium": 30, "high": 25}
+NEUTRAL_CLOSERS = ["", "", "Thanks.", "Appreciate your help.", "Kind regards.", "Could you advise?"]
+LEVEL_WEIGHTS = {"none": 28, "calm": 14, "medium": 28, "high": 18, "stakes": 12}
 
 
 def compose(text: str, rng: random.Random) -> str:
@@ -176,6 +249,9 @@ def compose(text: str, rng: random.Random) -> str:
         return text
     if level == "calm":
         extra = [calm(rng)]
+    elif level == "stakes":  # serious situation, neutral voice: no anger, no "!"
+        extra = [rng.choice(STAKES_KINDS)(rng), rng.choice(NEUTRAL_CLOSERS)]
+        extra = [s for s in extra if s]
     elif level == "medium":
         extra = [kind(rng) for kind in rng.sample(MEDIUM_KINDS, k=rng.choice([1, 1, 2]))]
     else:

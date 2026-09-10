@@ -34,3 +34,15 @@ def test_tune_class_weights_boosts_an_underpredicted_class() -> None:
     assert 0.4 * weights[2] > 0.5  # high now wins on the high tickets
     assert 0.1 * weights[2] < 0.8  # ...but not on the low ones
     assert f1 > 0.6
+
+
+def test_tune_class_weights_respects_the_high_recall_floor() -> None:
+    classes = ["low", "medium", "high"]
+    # 4 high tickets look low-ish; catching them costs some false alarms on low tickets
+    proba = np.array([[0.6, 0.1, 0.3]] * 4 + [[0.7, 0.1, 0.2]] * 6 + [[0.1, 0.8, 0.1]] * 4)
+    y_true = ["high"] * 4 + ["low"] * 6 + ["medium"] * 4
+    unconstrained, _ = tune_class_weights(proba, y_true, classes)
+    floored, _ = tune_class_weights(proba, y_true, classes, min_last_recall=1.0)
+    predict = lambda w: [classes[i] for i in (proba * np.asarray(w)).argmax(axis=1)]  # noqa: E731
+    assert all(p == "high" for p in predict(floored)[:4])
+    assert floored[2] >= unconstrained[2]

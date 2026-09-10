@@ -36,3 +36,15 @@ def test_compose_keeps_the_ticket_and_varies_the_wrapping() -> None:
     assert all(base in w for w in wrapped)
     assert base in wrapped  # some tickets get no urgency phrasing at all
     assert len(set(wrapped)) > 100  # ~30% stay unwrapped (identical), nearly all others differ
+
+
+def test_stakes_phrases_are_calm_and_mostly_labelled_high() -> None:
+    from app.core.enums import TicketUrgency
+    from app.ml.weak_labels import weak_label
+    from scripts.urgency_phrases import STAKES_KINDS
+
+    rng = random.Random(0)
+    phrases = [kind(rng) for kind in STAKES_KINDS for _ in range(50)]
+    assert not any("!" in p for p in phrases)
+    high = sum(weak_label(p).label is TicketUrgency.HIGH for p in phrases)
+    assert high / len(phrases) > 0.8  # some misses are deliberate label noise
