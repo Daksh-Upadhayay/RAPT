@@ -30,7 +30,7 @@ uv run python -m scripts.evaluate_model --model urgency_classifier --versions v1
 ```
 
 Each training run writes `model.joblib`, `metrics.json` and `report.md` (evaluation). To serve
-a new version, set `CATEGORY_MODEL_VERSION` / `URGENCY_MODEL_VERSION` (defaults `v1` / `v3`).
+a new version, set `CATEGORY_MODEL_VERSION` / `URGENCY_MODEL_VERSION` (defaults `v1` / `v4`).
 Inference: `app.ml.category_model.predict_category(text)` and `app.ml.urgency_model.predict_urgency(text)`.
 
 ## Migrations

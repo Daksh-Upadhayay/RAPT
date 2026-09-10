@@ -7,7 +7,8 @@
 | `processed/urgency_tickets.csv` | urgency corpus (v2): same columns, text wrapped in varied urgency phrasing | yes |
 | `eval/handwritten_test_set.csv` | 120 hand-written tickets with human `category` + `urgency` labels, written by Claude. Clean for category v1; used to diagnose urgency v1, so no longer clean for urgency | yes |
 | `eval/urgency_holdout_test.csv` | 50 tickets with `urgency` labels, written by the project owner. Scored once to choose urgency v2; since v3 part of the urgency **dev set** | yes |
-| `eval/urgency_fresh_test.csv` | 64 tickets (17 low / 30 medium / 17 high) written by the project owner after v3 was frozen. Scored once; chose urgency v3 over v2. Now spent for decisions | yes |
+| `eval/urgency_fresh_test.csv` | 64 tickets (17 low / 30 medium / 17 high) written by the project owner after v3 was frozen. Scored once; chose urgency v3 over v2. Since v4 used as training data (with the dev set), so spent | yes |
+| `eval/urgency_blind_eval_v2.csv` | 55 tickets (15 low / 15 medium / 25 high) written by the project owner after v4 was frozen. Scored once; confirmed v4 over v3. Now spent for decisions | yes |
 
 Rebuild (from `backend/`): `uv run python -m scripts.build_dataset` and
 `uv run python -m scripts.build_urgency_dataset`.

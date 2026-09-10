@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     # Which trained artifact under app/ml/artifacts/<model>/ to serve
     category_model_version: str = "v1"
-    urgency_model_version: str = "v3"
+    urgency_model_version: str = "v4"
 
 
 settings = Settings()

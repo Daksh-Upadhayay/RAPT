@@ -314,3 +314,61 @@ from or fills gaps in the spec docs. Newest phase at the bottom.
 - **Next:** missed high tickets are the main risk, since escalation depends on them.
   The next improvement should target high recall, measured on reviewer-corrected
   tickets from Phase 6. This fresh set is now spent for decisions.
+
+### Urgency v4: calm high-stakes data + human labels in training (pending fresh test)
+- **Problem:** all 9 high tickets v3 missed on the fresh set were written calmly. Their
+  urgency came from the situation: fraud, subtle safety risks, a calm deadline plus a
+  problem, lost money, a medical need. v3 gave them only a 3–19% chance of being high,
+  because every high training example got its urgency from tone. It had learned
+  "angry means high".
+- **Data:** a new "stakes" level in `scripts/urgency_phrases.py` (12% of tickets) states
+  one serious situation in a neutral voice, with no anger and no "!". There are six
+  kinds: calm deadline, fraud/privacy, subtle safety, money lost, essential need, blocked
+  access.
+- **Rules:** new strong rules `fraud_or_privacy` and `money_lost`. `safety` now covers
+  subtle hazards (warm to the touch, allergens, frayed, recall, latches), `time_pressure`
+  covers an event on a near date ("flight tomorrow"), and `hardship` covers hearing aids.
+  About 90% of stakes phrases are caught; the rest are deliberate label noise.
+- **Human labels in training:** all 234 human-labelled tickets (dev 170 + fresh 64) are
+  added to the weak-labelled corpus. Their weight is chosen by 5-fold cross-validation
+  over the human tickets: each ticket is predicted by a model that never saw it. The
+  features are the v3 winners (TF-IDF + tone + MiniLM embeddings → LogReg, C=2).
+- **Class weights with a high-recall floor:** tuning purely for macro-F1 set high to
+  ×0.6 and cut high recall to 0.76. Now the weights must keep cross-validated high
+  recall ≥ 0.85, and macro-F1 is maximised within that (`MIN_HIGH_RECALL`), because a
+  missed high ticket costs more than a false alarm.
+- **Cross-validated result:**
+  - **Chosen setting:** human weight ×100 (at that weight the human labels dominate),
+    class weights low 1.0 / medium 0.8 / high 1.0.
+  - **Scores:** macro-F1 **0.80**; high recall **0.88** (59/67, only 3 high → low) at
+    precision 0.76. Weak labels alone: 0.73 with high recall 0.90 but precision 0.63.
+  - **Confidence:** 84% accurate at ≥ 0.6 vs 56% below.
+- **Caveats:**
+  - **Optimistic numbers.** The rules were revised while reading these tickets, and the
+    class weights were tuned on the same out-of-fold predictions.
+  - **Weight at the edge.** Human weight ×100 was the top of the tested grid and the
+    trend was still rising, but the 0.80 vs 0.78 gap is within CV noise (±~0.05 on 234
+    tickets).
+  - **Unfair context numbers.** v3 (0.76) and the rules (0.86) on the same tickets are
+    not fair comparisons.
+- **Status:** v4 is frozen and **served** (`URGENCY_MODEL_VERSION=v4`). The project owner
+  chose to switch before a fresh test, on the strength of the cross-validated results.
+  The planned fresh high-heavy set is still the confirmation step: score v3 and v4 on it
+  once, and roll back to v3 if v4 does worse, above all on high recall.
+
+### Urgency v4 confirmed on a blind high-heavy set
+- **Eval set:** `data/eval/urgency_blind_eval_v2.csv`, 55 tickets (15 low / 15 medium /
+  25 high) written by the project owner after v4 was frozen, avoiding the situations
+  seen in earlier sets. There is no overlap with any training data. Scored once:
+  `app/ml/artifacts/urgency_classifier/eval_urgency_blind_eval_v2.md`.
+- **Result (macro-F1 / accuracy):** v3 0.63 / 0.64, **v4 0.76 / 0.80**, rules alone
+  0.53 / 0.56. The switch to v4 holds.
+- **High tickets, the goal of v4:** recall **0.92** (23/25, one called low) vs v3's 0.52
+  (13/25), with precision still 0.85. Calm but serious tickets are now caught.
+- **Confidence is now a strong signal:** 88% accurate at ≥ 0.6 vs 29% below, with 13% of
+  tickets below. The Escalation Agent's < 0.6 rule will catch most remaining errors.
+- **New weak spot: medium** (recall 0.47): 5 of 15 medium tickets were called low and 3
+  high. This matters less than missed highs (every draft is human-reviewed anyway), but
+  it is the next thing to improve, with reviewer corrections from Phase 6.
+- **Caveat:** 55 tickets → each score is roughly ±0.12; the v3 → v4 gain on high recall
+  (0.52 → 0.92) is far outside that. This set is now spent for decisions.
