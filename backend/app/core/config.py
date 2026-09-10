@@ -11,5 +11,13 @@ class Settings(BaseSettings):
     category_model_version: str = "v1"
     urgency_model_version: str = "v4"
 
+    # Knowledge-base (RAG) embeddings. Its output size must equal EMBEDDING_DIM below.
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+
+
+# Dimension of the knowledge_base.embedding pgvector column (set by its migration).
+# Changing the embedding model to one with another size needs a new migration + re-embed.
+EMBEDDING_DIM = 384
+
 
 settings = Settings()

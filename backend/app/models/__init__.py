@@ -3,8 +3,9 @@ from app.models.agent_log import AgentLog
 from app.models.base import Base
 from app.models.customer import Customer
 from app.models.draft_response import DraftResponse
+from app.models.knowledge_base import KnowledgeBaseEntry
 from app.models.model_prediction import ModelPrediction
 from app.models.order import Order
 from app.models.ticket import Ticket
 
-__all__ = ["AgentLog", "Base", "Customer", "DraftResponse", "ModelPrediction", "Order", "Ticket"]
+__all__ = ["AgentLog", "Base", "Customer", "DraftResponse", "KnowledgeBaseEntry", "ModelPrediction", "Order", "Ticket"]

@@ -372,3 +372,68 @@ from or fills gaps in the spec docs. Newest phase at the bottom.
   it is the next thing to improve, with reviewer corrections from Phase 6.
 - **Caveat:** 55 tickets → each score is roughly ±0.12; the v3 → v4 gain on high recall
   (0.52 → 0.92) is far outside that. This set is now spent for decisions.
+
+---
+
+## Phase 3 — Knowledge base + pgvector search
+
+### Embedding model: all-MiniLM-L6-v2, 384 dimensions
+- **Decision:** `sentence-transformers/all-MiniLM-L6-v2` (`settings.embedding_model`),
+  so `knowledge_base.embedding` is `VECTOR(384)`. `EMBEDDING_DIM` in `app/core/config.py`
+  and the migration pin the size, and `embed_texts` raises if a configured model
+  produces a different size.
+- **Why:** it's free, runs locally, and needs no API key (Anthropic has no embeddings
+  endpoint). It is already loaded for urgency v4's features, so one copy serves both, and
+  it's plenty for a few dozen short policy entries. An API model (e.g. Voyage) would
+  need a new migration and a re-embed.
+
+### Entries must fit in the model's 256-token window
+- **Decision:** `embed_document` rejects entries longer than the model reads: the API
+  returns 422 and the seed script refuses to run. Queries (ticket text) are truncated
+  instead.
+- **Why:** MiniLM silently ignores everything after 256 tokens, so a long entry's
+  later paragraphs would be unsearchable without anyone noticing. Entries are short
+  single-topic policies instead of chunked documents; if long documents are ever
+  needed, chunking belongs in the seed step.
+
+### Cosine distance with an HNSW index, vectors stored normalised
+- **Decision:** search orders by pgvector's cosine distance (`<=>`) and returns
+  `similarity = 1 - distance`. There is an HNSW index with `vector_cosine_ops`.
+- **Why:** for unit-length vectors cosine is the standard sentence-transformers metric.
+  At 27 rows Postgres scans anyway; the index is there so search stays fast as the
+  knowledge base grows. HNSW is approximate, which is irrelevant at this size.
+
+### No codec registration for asyncpg
+- **Finding:** pgvector's SQLAlchemy type sends and receives vectors as text, so asyncpg
+  needs no `register_vector` hook. Vectors go in as numpy arrays and come back as
+  `list[float]` (pgvector 0.5).
+
+### Knowledge-base content
+- **Decision:** 27 entries in `data/knowledge_base.json` (written in Phase 3), each
+  tagged with the ticket categories it answers. They cover order statuses, dispatch and
+  shipping times, tracking, delays, lost and customs parcels, address changes, damaged,
+  wrong and missing items, safety and recalls, warranty, returns, refund timing, the
+  $100 refund review (matching the Escalation Agent's threshold), duplicate charges,
+  price drops and promo codes, cancellation (full, partial, pre-order), unauthorised
+  charges, account access, product information, stock, setup/manuals/spare parts, and
+  support response times.
+- **Consistency:** the numbers match the rest of the system: order statuses as seeded,
+  1-2 day dispatch, the 7-business-day lost-parcel rule, the $100 review.
+
+### Only the two endpoints in 04-backend-api.md
+- **Decision:** `GET /knowledge-base` and `POST /knowledge-base` (embeds on create). Search
+  is a service function (`app.services.knowledge_base.search`) for the Knowledge Agent,
+  plus a CLI (`scripts/search_knowledge_base.py`). There is no search endpoint, since the
+  spec lists none.
+
+### Retrieval check
+- **Method:** `scripts/evaluate_retrieval.py` runs the 120 hand-written tickets as queries.
+  A hit means an entry tagged with the ticket's category comes back.
+- **Result:** hit@3 **0.97**, hit@1 0.82, MRR 0.89. Weakest are product questions (hit@1
+  0.65) and delivery delays (hit@3 0.90).
+- **Caveat:** the setup/manuals/spare-parts entry was added after the first run
+  showed product-specific questions had no matching entry (hit@3 went 0.93 → 0.97), and
+  the same author wrote the tickets and the entries. It's a sanity check, not a
+  benchmark.
+- **Known weakness:** strongly worded tickets ("10 days late, I want this escalated")
+  can pull up general support entries ahead of the delay policy.

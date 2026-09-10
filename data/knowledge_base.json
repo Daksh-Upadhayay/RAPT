@@ -1,0 +1,200 @@
+[
+  {
+    "title": "What each order status means",
+    "categories": [
+      "order_status"
+    ],
+    "content": "Processing: we have your order and are picking and packing it; there is no tracking number yet. Shipped: the parcel is with the carrier and a tracking number has been emailed. Delivered: the carrier has marked it delivered. Delayed: the parcel has missed its expected delivery date and we are chasing the carrier. Cancelled: the order was stopped before dispatch and any payment is being refunded."
+  },
+  {
+    "title": "Order processing and dispatch times",
+    "categories": [
+      "order_status",
+      "delivery_delay"
+    ],
+    "content": "Most orders leave our warehouse within 1-2 business days of payment. Orders placed after 2pm, at weekends or on public holidays are processed the next business day. During sales and holiday peaks, processing can take up to 4 business days. An order stays in 'processing' until it is handed to the carrier, and that is normal for the first two business days."
+  },
+  {
+    "title": "Tracking your order",
+    "categories": [
+      "order_status",
+      "delivery_delay"
+    ],
+    "content": "When your order ships we email a tracking number and link; you can also find it under Orders in your account. New tracking numbers can take up to 24 hours to show any movement on the carrier's site, and 'label created' only means the label has been printed. If the link shows 'not found' after 24 hours, or the email never arrived, contact us and we will resend the tracking details."
+  },
+  {
+    "title": "Order confirmation emails and missing confirmations",
+    "categories": [
+      "order_status"
+    ],
+    "content": "You should receive an order confirmation email within 15 minutes of paying. If it hasn't arrived, check your spam folder and the Orders page in your account: if the order is listed there, it went through. If your card was charged but no order appears, do not order again. Contact us with the date, amount and last four card digits and we will find the payment."
+  },
+  {
+    "title": "Shipping methods and delivery estimates",
+    "categories": [
+      "order_status",
+      "delivery_delay"
+    ],
+    "content": "Standard shipping arrives 3-7 business days after dispatch. Express shipping arrives 1-2 business days after dispatch and must be ordered before 2pm. The expected delivery date on your order page is an estimate from the carrier, not a guarantee. Remote areas can take 2-3 extra days."
+  },
+  {
+    "title": "Delivery delay policy",
+    "categories": [
+      "delivery_delay"
+    ],
+    "content": "If your parcel is 2 or more business days past its expected delivery date, we open a trace with the carrier and update you within 2 business days. If it is still missing 7 business days after the expected date, we treat it as lost and offer a free replacement or a full refund, whichever you prefer. If an express order arrives late, we refund the express shipping fee."
+  },
+  {
+    "title": "Tracking not updating or stuck in transit",
+    "categories": [
+      "delivery_delay",
+      "order_status"
+    ],
+    "content": "Tracking can pause for a few days while a parcel moves between depots, especially over weekends. If tracking hasn't updated for 5 business days, or the parcel has passed its expected delivery date, contact us and we will open a carrier trace. 'Delivery exception' usually means a failed attempt or an address problem, and the carrier normally retries the next business day."
+  },
+  {
+    "title": "Marked as delivered but not received",
+    "categories": [
+      "delivery_delay"
+    ],
+    "content": "Please check around your property, with neighbours and in any safe place the courier may have used, and wait 24 hours, because parcels are sometimes scanned early. If it still hasn't turned up, contact us within 14 days of the delivery scan. We open a claim with the carrier and send a replacement or refund once the claim is confirmed, usually within 5 business days."
+  },
+  {
+    "title": "International orders and customs delays",
+    "categories": [
+      "delivery_delay"
+    ],
+    "content": "International orders can be held by customs for inspection, which adds 2-10 business days and is outside our control. Any import duties or taxes are charged by the destination country and paid by the recipient. If a parcel is held for more than 10 business days, contact us and we will work with the carrier and customs to release it."
+  },
+  {
+    "title": "Changing the delivery address",
+    "categories": [
+      "order_status",
+      "cancellation"
+    ],
+    "content": "You can change the delivery address while the order is still 'processing' by contacting us. Once it has shipped we can't change the address, but the carrier may let you redirect the parcel using the tracking link. If the address is wrong and the parcel can't be redirected, we can cancel before dispatch or arrange a return when it comes back to us."
+  },
+  {
+    "title": "Damaged items: how to report them",
+    "categories": [
+      "damaged_item"
+    ],
+    "content": "If an item arrives damaged, cracked, dented, broken or leaking, report it within 14 days of delivery. Send photos of the item, the damage and the outer packaging. We will send a free replacement or give a full refund, whichever you prefer. You usually don't need to return a damaged item; we'll tell you if the carrier needs it collected for inspection."
+  },
+  {
+    "title": "Wrong or missing items",
+    "categories": [
+      "damaged_item",
+      "refund_request"
+    ],
+    "content": "If you received the wrong item, the wrong size or colour, or parts are missing, contact us within 14 days of delivery with a photo of what arrived and your order number. We send the correct item or the missing parts free of charge, and a prepaid return label for the wrong item. If the correct item is out of stock, we refund you in full."
+  },
+  {
+    "title": "Product safety concerns and recalls",
+    "categories": [
+      "damaged_item",
+      "product_question"
+    ],
+    "content": "If a product overheats, sparks, smokes, smells of burning, leaks battery fluid or has caused an injury, stop using it and unplug it straight away. Contact us immediately: safety reports go straight to a team lead and we arrange collection and a full refund or replacement. If a product is recalled, we email affected customers and offer a full refund without needing a return."
+  },
+  {
+    "title": "Warranty and faulty products",
+    "categories": [
+      "product_question",
+      "damaged_item"
+    ],
+    "content": "Electronics and appliances come with a 1-year manufacturer warranty from the delivery date; some brands offer longer, as shown on the product page. The warranty covers faults in normal use, not accidental damage or wear. For a warranty claim, contact us with your order number and a description or video of the fault; we arrange repair, replacement or a refund."
+  },
+  {
+    "title": "Returns and refund policy",
+    "categories": [
+      "refund_request"
+    ],
+    "content": "You can return most items within 30 days of delivery for a full refund, as long as they are unused and in their original packaging. Start a return from the Orders page to get a return label; return shipping is free if the item was faulty, damaged or wrong, otherwise a $5.99 label fee is deducted. Personalised items, opened hygiene products and gift cards can't be returned."
+  },
+  {
+    "title": "How long refunds take",
+    "categories": [
+      "refund_request",
+      "cancellation"
+    ],
+    "content": "We refund within 2 business days of receiving your return or cancelling your order. Your bank then takes 5-10 business days to show the money on your statement. Refunds go back to the original payment method; store credit is available on request and is instant. If it has been more than 10 business days since we confirmed your refund, contact us with your order number and we will trace it."
+  },
+  {
+    "title": "Large refunds and extra review",
+    "categories": [
+      "refund_request"
+    ],
+    "content": "Refunds over $100 are reviewed by a team lead before they are issued. This usually adds one business day and protects customers against fraud. You will get an email once the refund has been approved, and the normal bank processing time applies after that."
+  },
+  {
+    "title": "Duplicate charges, partial refunds and payment errors",
+    "categories": [
+      "refund_request"
+    ],
+    "content": "If you were charged twice, one charge is usually a temporary authorisation that disappears within 3-5 business days. If both charges have settled, we refund the duplicate as soon as we confirm it. If a refund was smaller than expected, it may exclude the shipping fee or a return label fee; contact us and we will explain the breakdown or correct it."
+  },
+  {
+    "title": "Price drops, promo codes and discounts",
+    "categories": [
+      "refund_request"
+    ],
+    "content": "If an item's price drops within 7 days of your purchase, we refund the difference on request. Promo codes must be entered at checkout, and only one code can be used per order. If a valid code failed to apply, contact us within 7 days and we will refund the discount. We don't price-match other retailers."
+  },
+  {
+    "title": "Cancelling an order",
+    "categories": [
+      "cancellation"
+    ],
+    "content": "You can cancel an order while it is still 'processing' from the Orders page or by contacting us, and we refund it in full. Once an order has shipped it can't be cancelled, but you can refuse the delivery or return it within 30 days for a refund. If the cancel button isn't showing or gives an error, contact us and we will cancel it manually."
+  },
+  {
+    "title": "Cancelling part of an order or a pre-order",
+    "categories": [
+      "cancellation"
+    ],
+    "content": "While an order is processing you can cancel individual items and keep the rest, and you are refunded for the cancelled items. Pre-orders can be cancelled at any time before they ship, and you are not charged until the item is dispatched. If you placed the same order twice by mistake, tell us which one to cancel."
+  },
+  {
+    "title": "Unauthorised orders and suspicious charges",
+    "categories": [
+      "cancellation",
+      "refund_request"
+    ],
+    "content": "If you see an order or charge you didn't make, contact us immediately. We freeze your account, cancel any unshipped orders and investigate within 1 business day. Confirmed unauthorised charges are refunded in full. We also recommend you tell your bank and change your password. Treat any email asking you to confirm card details as suspicious: we never ask for your full card number."
+  },
+  {
+    "title": "Account access and password resets",
+    "categories": [
+      "order_status",
+      "cancellation"
+    ],
+    "content": "Use 'Forgot password' on the sign-in page to get a reset link, which expires after one hour. If the email doesn't arrive, check your spam folder. If you still can't get in, contact us from the email address on your account. For time-sensitive changes such as cancelling or changing an address before dispatch, we can make them for you while your access is being restored."
+  },
+  {
+    "title": "Product information, sizing and compatibility",
+    "categories": [
+      "product_question"
+    ],
+    "content": "Each product page lists dimensions, materials, what's in the box, compatibility and care instructions, and clothing and footwear pages have a size guide. If you are between sizes, we suggest the larger size. We can't guarantee compatibility with third-party devices beyond what the manufacturer states. Ingredient and allergen details for food and cosmetics are on the product label; if they differ from the website, the label is correct and you can return the item."
+  },
+  {
+    "title": "Stock, restocks and product availability",
+    "categories": [
+      "product_question"
+    ],
+    "content": "If an item is out of stock, choose 'Notify me' on the product page to get an email when it's back. Restock dates depend on the supplier, and we only show a date when it is confirmed. Colours and sizes not listed on the product page aren't available. We can't reserve items or hold stock for customers."
+  },
+  {
+    "title": "Setup help, manuals, care instructions and spare parts",
+    "categories": [
+      "product_question"
+    ],
+    "content": "Setup guides, user manuals and care instructions (washing, cleaning, weight limits) are linked under 'Documents' on each product page, and many products also have a setup video. If a manual is missing or unclear, contact us with the product name and we will send the manufacturer's guide or ask them for you. Spare parts and accessories such as filters, chargers and replacement heads are listed under 'Accessories' on the product page when the manufacturer sells them."
+  },
+  {
+    "title": "Support response times and urgent issues",
+    "categories": [],
+    "content": "We reply to every message within 24 hours, seven days a week. Safety issues, unauthorised charges, and orders that must be changed before dispatch are treated as urgent and handled first. Please keep to one conversation per issue; opening several tickets for the same problem can slow things down."
+  }
+]

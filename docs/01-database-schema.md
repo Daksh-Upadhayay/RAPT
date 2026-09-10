@@ -45,16 +45,16 @@ Mock e-commerce order data, seeded with Faker.
 | updated_at | TIMESTAMPTZ | |
 
 ### `knowledge_base`
-**Deferred to Phase 3** — created in its own migration (together with
-`CREATE EXTENSION vector`) once the embedding model, and therefore the vector
-dimension, is chosen. Not part of the Phase 1 migration.
+Created in Phase 3 by its own migration (`a3f9c1d27e45`, which also runs
+`CREATE EXTENSION vector`). Embeddings come from `sentence-transformers/all-MiniLM-L6-v2`
+(384 dimensions); see DECISIONS.md, Phase 3.
 
 | Column | Type | Notes |
 |---|---|---|
 | id | UUID PK | |
 | title | TEXT | |
 | content | TEXT | policy/FAQ text |
-| embedding | VECTOR(1536) | dimension depends on embedding model chosen |
+| embedding | VECTOR(384) | embedding of "title. content", unit length; HNSW index with cosine distance |
 | created_at | TIMESTAMPTZ | default now() |
 
 ### `agent_logs`
@@ -105,4 +105,4 @@ Logs every ML model prediction for traceability + future retraining.
 ## Notes for Claude Code
 - Use Alembic for migrations from the start — don't hand-write raw SQL migrations
 - Use UUID primary keys (not serial ints) — generate with `uuid4()` at the app layer or `gen_random_uuid()` at the DB layer
-- `embedding` column dimension must match whatever embedding model gets chosen in `02-ml-models.md` — confirm before creating the migration
+- `embedding` column dimension (384) must match the embedding model (`EMBEDDING_DIM` in `app/core/config.py`); switching to a model with another size needs a new migration and a re-embed

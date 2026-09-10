@@ -4,6 +4,7 @@
 |---|---|---|
 | `raw/bitext_customer_support.csv` | [Bitext customer-support dataset](https://huggingface.co/datasets/bitext/Bitext-customer-support-llm-chatbot-training-dataset) (CDLA-Sharing-1.0), downloaded by `build_dataset.py` | no |
 | `processed/tickets.csv` | category dataset: `text, category, source, group, split` | yes |
+| `knowledge_base.json` | 27 policy/FAQ entries (`title`, `content`, `categories`) embedded into the `knowledge_base` table by `seed_knowledge_base.py`; `categories` is used only by `evaluate_retrieval.py` | yes |
 | `processed/urgency_tickets.csv` | urgency corpus (v2): same columns, text wrapped in varied urgency phrasing | yes |
 | `eval/handwritten_test_set.csv` | 120 hand-written tickets with human `category` + `urgency` labels, written by Claude. Clean for category v1; used to diagnose urgency v1, so no longer clean for urgency | yes |
 | `eval/urgency_holdout_test.csv` | 50 tickets with `urgency` labels, written by the project owner. Scored once to choose urgency v2; since v3 part of the urgency **dev set** | yes |

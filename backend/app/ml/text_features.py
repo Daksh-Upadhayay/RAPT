@@ -69,8 +69,8 @@ class ToneFeatures(BaseEstimator, TransformerMixin):
 
 
 @cache
-def _sentence_model(model_name: str):
-    # Imported lazily: torch is slow to import and only the urgency model needs it
+def sentence_model(model_name: str):
+    # Imported lazily: torch is slow to import, and the category model never needs it
     from sentence_transformers import SentenceTransformer
 
     # Prefer the local Hugging Face cache: skips a network check on every process start
@@ -93,7 +93,7 @@ def embed(texts: list[str], model_name: str) -> np.ndarray:
     if missing:
         if len(_EMBED_CACHE) + len(missing) > _EMBED_CACHE_MAX:
             _EMBED_CACHE.clear()
-        vectors = _sentence_model(model_name).encode(
+        vectors = sentence_model(model_name).encode(
             missing, batch_size=64, normalize_embeddings=True, show_progress_bar=False
         )
         _EMBED_CACHE.update(((model_name, t), v) for t, v in zip(missing, vectors, strict=True))
@@ -109,7 +109,7 @@ class SentenceEmbeddings(BaseEstimator, TransformerMixin):
         self.model_name = model_name
 
     def fit(self, X, y=None):
-        self.dim_ = _sentence_model(self.model_name).get_embedding_dimension()
+        self.dim_ = sentence_model(self.model_name).get_embedding_dimension()
         return self
 
     def transform(self, X) -> sparse.csr_matrix:
