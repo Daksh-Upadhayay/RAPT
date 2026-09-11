@@ -479,6 +479,8 @@ from or fills gaps in the spec docs. Newest phase at the bottom.
   draft; approval acts on the newest draft.
 
 ### Draft Agent LLM: Gemini free tier by default, Claude optional
+- **Superseded in Phase 8:** a free provider chain led by Groq; Gemini only for the
+  `dev` tenant. See Phase 8.
 - **Decision:** the Draft Agent calls its LLM through a small `Drafter` interface
   (`app/agents/drafter.py`). `DRAFT_PROVIDER=auto` picks Gemini when `GEMINI_API_KEY`
   is set, else Claude when `ANTHROPIC_API_KEY` is set, else an offline placeholder.
@@ -888,3 +890,72 @@ the partners ask for.
   a user to another site). Signing in or out clears all cached data, since the next user
   may belong to another tenant. The header shows the user and tenant with "Sign out"; the
   "Reviewing as" box is gone.
+
+---
+
+## Phase 8 — Free, private and resilient drafting
+
+### Constraint: no paid LLM
+- The project owner can't pay for an API key. The Phase 7 roadmap assumed a paid tier
+  so real customers' messages wouldn't be used for training; this phase finds free
+  options that don't train on prompts instead.
+
+### Providers checked (September 2026)
+- **Gemini free tier:** Google may use prompts and responses to improve its products,
+  and human reviewers may read them. Unsuitable for real customer data.
+- **Groq free tier:** no retention of inference data by default (up to 30 days only for
+  abuse or reliability investigations), a Zero Data Retention switch for every account,
+  and its terms don't allow training on customer inputs or outputs. Confirm the current
+  terms before the pilot.
+- **Cerebras free tier:** says it doesn't store or reuse data. Our account currently gets
+  `402 Payment required` for every model, so it can't be relied on.
+- **Local model (Ollama):** free and fully private, but an 8 GB laptop can't run a useful
+  model next to the embedding and classifier models. Worth revisiting with a server in
+  Phase 10.
+
+### Decision: a fallback chain of free providers
+- `ChainDrafter` tries, in order: Groq `openai/gpt-oss-120b` (reasoning effort low),
+  Groq `qwen/qwen3.8-27b` (its own rate-limit bucket, reasoning off), Cerebras
+  `gpt-oss-120b`, Gemini (tenants in `GEMINI_ALLOWED_TENANTS` only, default `dev`),
+  Claude (paid, optional). Only providers with keys join the chain; no key at all gives
+  the offline placeholder.
+- **One class for Groq and Cerebras:** both speak the OpenAI chat-completions API, so
+  `OpenAICompatibleDrafter` calls them with `httpx` (no new SDK).
+- **Retries:** 429, 5xx and timeouts are retried once (`LLM_ATTEMPTS_PER_PROVIDER=2`),
+  honouring `Retry-After` up to 10 s; a longer wait, a bad key, no quota (402) or an
+  invalid request moves straight to the next provider.
+- **Unusable answers fail over too:** cut off at the token limit, stopped early, or empty.
+- **Every attempt is recorded** in the draft step's log (`attempts`), and the trace view
+  lists them when a fallback happened.
+- **If every provider fails**, the existing failure path applies: the ticket goes to
+  review escalated, with each provider's error in the reason.
+
+### Tenant-aware routing
+- The Draft Agent passes the ticket's tenant slug to the drafter. A provider that may
+  train on prompts is skipped for any tenant not on its allow-list, so a real business's
+  tickets can't reach it even if every other provider is down.
+
+### Less data leaves the system
+- **Contact details masked:** emails and phone numbers in the customer's message become
+  `[email]` / `[phone]` before any LLM call; the reviewer still sees the original. Phone
+  numbers need a `+` or separators: unbroken digit runs stay, because those are usually
+  order or tracking numbers the reply needs.
+- **No internal ids:** the order's internal UUID is no longer in the prompt (a live draft
+  quoted it); the tracking number, item and dates remain.
+
+### Interrupted runs resume at startup
+- Background runs live in the API process, so a restart mid-run left tickets `new` or
+  `in_progress` forever (a known limitation since Phase 4). On startup the API now reruns
+  them one at a time. Finding them crosses tenants, so it goes through a narrow SECURITY
+  DEFINER function, `unfinished_agent_runs()`, returning only ticket and tenant ids
+  (migration `f2c5a8d1e7b3`). Correct for one API instance; several would need a lease
+  first.
+
+### Checked live
+- A real ticket through the API: Groq `gpt-oss-120b` drafted in 1.2 s on the first try,
+  with the phone and email masked in the prompt.
+- With the primary model broken on purpose, the chain fell back to Groq's Qwen model and
+  recorded the 404.
+- Tests fake the providers with `httpx.MockTransport`: request shape, retries, giving up
+  on long waits, non-retryable errors, fallback order, the tenant allow-list, masking,
+  chain construction from keys, the tenant reaching the drafter, and resuming runs.

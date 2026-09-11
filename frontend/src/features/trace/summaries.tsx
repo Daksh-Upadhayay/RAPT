@@ -120,6 +120,15 @@ export function outputSummary(agent: AgentName, log: AgentLogResponse): ReactNod
               {usage.input_tokens} tokens in, {usage.output_tokens ?? '?'} out
             </p>
           )}
+          {out.attempts?.some((a) => !a.ok) && (
+            <ul className="mt-2 space-y-0.5 text-tiny">
+              {out.attempts.map((a) => (
+                <li key={a.provider} className={a.ok ? 'text-ink' : 'text-ink-3'}>
+                  {a.provider}: {a.ok ? 'wrote the draft' : a.skipped ?? a.error}
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       )
     }

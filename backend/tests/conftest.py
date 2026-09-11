@@ -154,9 +154,11 @@ class FakeDrafter:
     def __init__(self, text: str = "Hi, thanks for reaching out. Customer Support") -> None:
         self.text = text
         self.calls: list[tuple[str, str]] = []
+        self.tenants: list[str | None] = []
 
-    async def draft(self, system: str, user: str) -> DraftResult:
+    async def draft(self, system: str, user: str, tenant: str | None = None) -> DraftResult:
         self.calls.append((system, user))
+        self.tenants.append(tenant)
         return DraftResult(text=self.text, mode="fake", model="fake-model")
 
 

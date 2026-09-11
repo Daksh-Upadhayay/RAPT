@@ -9,7 +9,7 @@ uv sync                          # create .venv and install locked dependencies
 brew install pgvector             # Postgres extension for the knowledge base
 createdb rapt && createdb rapt_test
 createuser rapt_app              # the API's restricted role (no superuser, no BYPASSRLS)
-cp .env.example .env             # optional: defaults target localhost; set JWT_SECRET, add a GEMINI_API_KEY
+cp .env.example .env             # optional: defaults target localhost; set JWT_SECRET and a free GROQ_API_KEY
 uv run alembic upgrade head      # migrations (as the owner); grants rapt_app its table access
 ```
 

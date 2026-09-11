@@ -88,11 +88,19 @@ export function orderLookupOutput(log?: AgentLogResponse): OrderLookupResult | n
   return isObject(result) ? (result as unknown as OrderLookupResult) : null
 }
 
+export interface DraftAttempt {
+  provider: string
+  ok?: string
+  error?: string
+  skipped?: string
+}
+
 export interface DraftOutput {
   draft_text?: string
   mode?: string
   model?: string
   usage?: Record<string, number>
+  attempts?: DraftAttempt[] // the provider chain, in order (Phase 8)
 }
 
 export const draftOutput = (log?: AgentLogResponse): DraftOutput => (log?.output ?? {}) as DraftOutput

@@ -1,9 +1,35 @@
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.routers import agents, auth, customers, knowledge_base, metrics, orders, reviews, tickets
+from app.agents.drafter import get_drafter
+from app.agents.recovery import resume_unfinished_runs
+from app.core.config import settings
+from app.core.db import SessionLocal
+from app.routers import (
+    agents,
+    auth,
+    customers,
+    knowledge_base,
+    metrics,
+    orders,
+    reviews,
+    tickets,
+)
 
-app = FastAPI(title="RAPT Backend")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # In the background, so a long backlog doesn't delay startup
+    task = asyncio.create_task(resume_unfinished_runs(SessionLocal, get_drafter())) if settings.resume_unfinished_runs_on_startup else None
+    yield
+    if task is not None and not task.done():
+        task.cancel()
+
+
+app = FastAPI(title="RAPT Backend", lifespan=lifespan)
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 CSRF_HEADER = "x-rapt-csrf"

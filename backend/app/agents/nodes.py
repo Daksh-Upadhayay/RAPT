@@ -33,6 +33,7 @@ class AgentContext:
 
     session: AsyncSession
     drafter: Drafter
+    tenant_slug: str | None = None  # some LLM providers are allowed for some tenants only
 
 
 @dataclass
@@ -179,7 +180,7 @@ async def order_lookup(state: TicketState, ctx: AgentContext) -> NodeResult:
 async def draft(state: TicketState, ctx: AgentContext) -> NodeResult:
     """LLM draft grounded in the retrieved entries and the order record."""
     user_prompt = build_user_prompt(state.subject, state.body, state.order_data, state.retrieved_docs)
-    result = await ctx.drafter.draft(SYSTEM_PROMPT, user_prompt)
+    result = await ctx.drafter.draft(SYSTEM_PROMPT, user_prompt, ctx.tenant_slug)
     ctx.session.add(DraftResponse(ticket_id=uuid.UUID(state.ticket_id), draft_text=result.text))
     return NodeResult(
         update={"draft_text": result.text},

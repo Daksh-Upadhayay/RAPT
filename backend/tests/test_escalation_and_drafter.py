@@ -3,10 +3,13 @@ from types import SimpleNamespace
 import pytest
 from google.genai import errors as genai_errors
 from google.genai import types as genai_types
-from pydantic import SecretStr
 
-from app.agents import drafter as drafter_module
-from app.agents.drafter import ClaudeDrafter, DraftError, GeminiDrafter, OfflineDrafter, build_user_prompt
+from app.agents.drafter import (
+    ClaudeDrafter,
+    DraftError,
+    GeminiDrafter,
+    build_user_prompt,
+)
 from app.agents.escalation import EscalationInput, decide_escalation
 from app.schemas.knowledge_base import RetrievedDoc
 
@@ -108,30 +111,6 @@ async def test_claude_drafter_request_and_result() -> None:
 async def test_claude_drafter_rejects_unusable_responses(stop_reason: str) -> None:
     with pytest.raises(DraftError):
         await claude_drafter(StubMessages(stop_reason=stop_reason)).draft("SYSTEM", "USER")
-
-
-@pytest.mark.parametrize(
-    ("provider", "gemini_key", "anthropic_key", "expected"),
-    [
-        ("auto", None, None, OfflineDrafter),
-        ("auto", "g-key", None, GeminiDrafter),
-        ("auto", "g-key", "a-key", GeminiDrafter),  # Gemini wins when both are set
-        ("auto", None, "a-key", ClaudeDrafter),
-        ("claude", "g-key", "a-key", ClaudeDrafter),
-        ("offline", "g-key", None, OfflineDrafter),
-    ],
-)
-def test_provider_selection(
-    monkeypatch: pytest.MonkeyPatch, provider: str, gemini_key: str | None, anthropic_key: str | None, expected: type
-) -> None:
-    monkeypatch.setattr(drafter_module.settings, "draft_provider", provider)
-    monkeypatch.setattr(drafter_module.settings, "gemini_api_key", SecretStr(gemini_key) if gemini_key else None)
-    monkeypatch.setattr(drafter_module.settings, "anthropic_api_key", SecretStr(anthropic_key) if anthropic_key else None)
-    drafter_module._default_drafter.cache_clear()
-    try:
-        assert isinstance(drafter_module.get_drafter(), expected)
-    finally:
-        drafter_module._default_drafter.cache_clear()
 
 
 def gemini_response(finish=genai_types.FinishReason.STOP, text="Hello from Gemini", blocked=None):

@@ -87,7 +87,7 @@ async def test_refund_over_threshold_is_escalated(client: AsyncClient, customer:
 
 
 class FailingDrafter:
-    async def draft(self, system: str, user: str) -> DraftResult:
+    async def draft(self, system: str, user: str, tenant: str | None = None) -> DraftResult:
         raise DraftError("Claude API error 529: overloaded")
 
 

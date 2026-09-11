@@ -10,6 +10,7 @@ review queue for a human, who can rerun it, instead of silently stalling in_prog
 import logging
 import uuid
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.drafter import Drafter
@@ -18,7 +19,7 @@ from app.agents.nodes import AgentContext
 from app.agents.state import TicketState
 from app.core.enums import TicketStatus
 from app.core.tenancy import get_scoped, tenant_session
-from app.models import Ticket
+from app.models import Tenant, Ticket
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ async def run_agent_graph(
             logger.warning("Agent run skipped: ticket %s not found", ticket_id)
             return
         ticket.status = TicketStatus.IN_PROGRESS
+        tenant_slug = await session.scalar(select(Tenant.slug).where(Tenant.id == tenant_id))
         await session.commit()
         state = TicketState(
             ticket_id=str(ticket.id),
@@ -43,7 +45,7 @@ async def run_agent_graph(
         )
 
         try:
-            await agent_graph.ainvoke(state, context=AgentContext(session=session, drafter=drafter))
+            await agent_graph.ainvoke(state, context=AgentContext(session=session, drafter=drafter, tenant_slug=tenant_slug))
             ticket = await session.get_one(Ticket, ticket_id)
         except Exception as exc:
             logger.exception("Agent run failed for ticket %s", ticket_id)
