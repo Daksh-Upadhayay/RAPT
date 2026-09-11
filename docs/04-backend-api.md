@@ -72,10 +72,17 @@ the separation between persistence layer and API contract layer").
 - `GET /orders/{id}` — order lookup (used by the Order Lookup Tool internally,
   but also useful for the frontend to display order context)
 
+### Customers (added in Phase 5, for the Submit Ticket form)
+- `GET /customers?search=&limit=` — customers whose name or email contains `search`
+  (case-insensitive), by name; the first `limit` (default 10, max 50) without it
+- `GET /customers/{id}` — one customer
+- `GET /customers/{id}/orders` — the customer's orders, newest first
+
 ### Metrics
-- `GET /metrics/summary` — aggregate stats for the dashboard: avg resolution
-  time, escalation rate, approval rate (approved-as-is vs. edited), tickets
-  per category
+- `GET /metrics/summary?days=30` — aggregate stats for the dashboard: avg resolution
+  time (overall and per category), escalation rate (overall and per day for the
+  last `days` days), approval rate (approved-as-is vs. edited, split by escalation),
+  tickets per category and per status. Definitions are in `app/services/metrics.py`.
 
 ## Pydantic schema examples
 ```python

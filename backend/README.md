@@ -19,6 +19,9 @@ uv run uvicorn app.main:app --reload    # API docs at http://localhost:8000/docs
 uv run pytest                           # uses the rapt_test database (reset on every run)
 ```
 
+The reviewer UI is in `../frontend` (`npm run dev`, http://localhost:5173); it proxies
+`/api` to this server on port 8000.
+
 ## Seed data + ML models
 
 ```bash

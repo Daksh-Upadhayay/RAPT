@@ -582,3 +582,79 @@ from or fills gaps in the spec docs. Newest phase at the bottom.
   mid-run, leaving the ticket `in_progress` and rerun returning 409. That's acceptable
   at this scale (the spec says no queue); a stale-run sweeper or a real queue would fix
   it.
+
+---
+
+## Phase 5 — React frontend
+
+### Stack: Vite + React 19 + TypeScript, Tailwind, TanStack Query, Recharts
+- **Decision:** `frontend/` scaffolded with create-vite (`react-ts`), React Router for
+  the five pages, TanStack Query for fetching, caching and polling, Tailwind v4 for
+  styling, Recharts for the dashboard (as the spec says). No component library:
+  a handful of shared classes (`btn-*`, `badge`, `input`) in `index.css`.
+- **Why TanStack Query:** the spec relies on polling (ticket status, the live trace,
+  the queue). `refetchInterval` as a function of the data stops polling once a run ends,
+  and one cache means approving a draft updates the queue count and the dashboard.
+
+### No CORS: the Vite server proxies `/api` to FastAPI
+- **Decision:** the app calls `/api/...`; `vite.config.ts` forwards it to
+  `http://localhost:8000` (or `API_URL`) for both `dev` and `preview`.
+- **Why:** same-origin requests, so the backend needs no CORS middleware and no
+  allowed-origins setting. A real deployment would serve both behind one reverse proxy.
+
+### Types mirror the Pydantic schemas by hand, checked by a backend test
+- **Decision:** `frontend/src/types/index.ts` has one interface per schema, as the spec
+  asks. `backend/tests/test_frontend_types.py` compares it with FastAPI's OpenAPI schema:
+  field names for 15 schemas, optional request fields, and the enum values.
+- **Why:** hand-written types read better than generated ones, and the test catches
+  drift, so a backend change can't silently break the UI.
+- **Agent logs** are `dict[str, Any]` in the API. `src/lib/trace.ts` reads them with
+  typed, defensive views of what `app/agents/nodes.py` writes.
+
+### Backend additions the frontend needed
+- **Customers:** the Submit Ticket form needs a `customer_id` and offers "search by order
+  ID or customer email", but the API had only `GET /orders/{id}`. Added
+  `GET /customers?search=` (name or email, case-insensitive, LIKE wildcards escaped),
+  `GET /customers/{id}` and `GET /customers/{id}/orders`. Pasting an order ID into the
+  customer field selects that order's customer and links the order.
+- **Metrics:** `GET /metrics/summary` (listed in the spec, not built in Phase 4). Definitions:
+  - escalation rate = flagged / tickets the Escalation Agent decided on (running or
+    failed-early tickets don't count), overall and per UTC day for the last `days` days;
+  - a reviewed draft is the approved one (one per resolved ticket, so reruns don't
+    double count); approval rate = approved without edits / reviewed;
+  - resolution time = ticket created → draft approved.
+- **Knowledge snippets:** the Knowledge Agent's log now includes each entry's content,
+  not only title and score. The review screen shows exactly what the draft was grounded
+  in, even after the knowledge base is edited or re-seeded (Phase 4 re-seeding changed
+  every entry id). Older runs show titles only.
+
+### Review flow
+- **Draft editor:** the draft is editable inline. "Approve" is enabled only while the
+  text is unchanged; once edited, "Edit & approve" sends the new text, and "Revert"
+  restores the AI draft. So a reviewer can't approve the original by mistake after
+  editing.
+- **Reviewer identity:** a "Reviewing as" field in the header, stored in localStorage,
+  sent as `reviewer_id`. A placeholder until there is auth.
+- **Failed runs:** a ticket awaiting review with no draft shows the error path (link to
+  the trace, "Rerun agents") instead of an editor.
+- **Runs:** reruns append logs; a run starts at each Triage log. The detail page and
+  trace show the latest run; the trace can switch to earlier runs.
+
+### Dashboard
+- **Charts:** tickets by category (bars in the category colours), escalation rate per day
+  (line, 7/30/90-day range on that chart only, since the other metrics are all-time),
+  draft approval (as-is vs edited, stacked by escalation), average resolution time by
+  category.
+- **Colour:** six fixed category colours, used on every badge and chart, validated for
+  colour-blind separation. Three of them are below 3:1 contrast on white, so every chart
+  has direct value labels and a table view. Urgency uses status colours (grey, amber,
+  red) with a level icon and a label, never colour alone.
+
+### Checked end to end
+- In headless Chrome against the real backend and Gemini: submit a ticket with a linked
+  order, watch the five steps finish live, open the trace, edit and approve the draft,
+  see the queue and dashboard update. No console errors; no horizontal scroll at 390 px.
+- **Finding:** the category model (v1) labelled "ordered over a week ago, still hasn't
+  arrived, tracking hasn't moved" as `damaged_item` (0.59). The low-confidence rule
+  escalated it, as designed. The category model is weak on this phrasing and could be
+  revisited in Phase 6 with reviewer corrections.

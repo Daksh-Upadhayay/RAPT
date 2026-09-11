@@ -133,7 +133,9 @@ async def triage(state: TicketState, ctx: AgentContext) -> NodeResult:
 async def knowledge(state: TicketState, ctx: AgentContext) -> NodeResult:
     """Top-k knowledge-base entries by embedding similarity (pgvector)."""
     docs = await search(ctx.session, state.text, k=TOP_K)
-    hits = [{"id": d.id, "title": d.title, "similarity": d.similarity} for d in docs]
+    # Content too: the review screen shows exactly what the draft was grounded in, even
+    # if the entry is edited or re-seeded later
+    hits = [{"id": d.id, "title": d.title, "content": d.content, "similarity": d.similarity} for d in docs]
     return NodeResult(
         update={"retrieved_docs": docs},
         output={

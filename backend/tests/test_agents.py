@@ -71,7 +71,9 @@ async def test_knowledge_agent_passes_matching_entries_to_the_draft(
     created = await create_ticket(client, customer, "My mirror arrived shattered in the box.")
 
     knowledge_log = (await client.get(f"/tickets/{created['id']}/agent-trace")).json()[1]
-    assert knowledge_log["output"]["retrieved"][0]["title"] == "Damaged items"
+    top = knowledge_log["output"]["retrieved"][0]
+    assert top["title"] == "Damaged items"
+    assert top["content"].startswith("If an item arrives broken")  # what the reviewer sees
     assert 'title="Damaged items"' in drafter.calls[0][1]
 
 
