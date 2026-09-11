@@ -2,8 +2,9 @@
 
 1. Label every row of the urgency corpus (data/processed/urgency_tickets.csv, built by
    scripts/build_urgency_dataset.py) with the rules in app/ml/weak_labels.py.
-2. Add every human-labelled ticket we have (scripts.ml_training.load_urgency_human, 234
-   rows) to the training data, weighted up by `human_weight`.
+2. Add every human-labelled ticket we have to the training data, weighted up by
+   `human_weight` (scripts.ml_training.load_urgency_human: 234 written rows, plus
+   reviewers' urgency corrections exported by scripts/export_feedback.py).
 3. Features: TF-IDF word 1-2-grams + tone features + sentence embeddings (MiniLM), then
    logistic regression. That combination won on human labels for v3.
 4. 5-fold cross-validation over the human tickets picks `human_weight` (0 means weak
@@ -45,6 +46,7 @@ from scripts.ml_training import (
     URGENCY_HOLDOUT_PATH,
     ensure_new_version,
     evaluate,
+    feedback_metadata,
     file_sha256,
     load_splits,
     load_urgency_human,
@@ -247,6 +249,8 @@ MEDIUM rule; MEDIUM if one weak HIGH or any MEDIUM rule fires; otherwise LOW.
                 "n_human": len(human),
                 "holdout_sha256": file_sha256(URGENCY_HOLDOUT_PATH),
                 "fresh_v3_sha256": file_sha256(URGENCY_FRESH_PATH),
+                # Reviewer corrections are part of `human` (source "feedback")
+                "feedback": feedback_metadata("urgency"),
             },
         ),
     }

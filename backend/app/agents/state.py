@@ -3,6 +3,12 @@ from pydantic import BaseModel
 from app.schemas.knowledge_base import RetrievedDoc
 
 
+def ticket_text(subject: str, body: str) -> str:
+    """What the classifiers and the knowledge search read. Training rows built from real
+    tickets (scripts/export_feedback.py) use the same format."""
+    return f"{subject}\n{body}"
+
+
 class TicketState(BaseModel):
     """Shared LangGraph state (03-agent-architecture.md). Each node returns only the
     fields it changes."""
@@ -25,5 +31,4 @@ class TicketState(BaseModel):
 
     @property
     def text(self) -> str:
-        """What the classifiers and the knowledge search read: subject + body."""
-        return f"{self.subject}\n{self.body}"
+        return ticket_text(self.subject, self.body)

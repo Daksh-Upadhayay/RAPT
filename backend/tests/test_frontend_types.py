@@ -22,6 +22,7 @@ EXPECTED = {
     "DraftResponseRead",
     "ReviewApproveRequest",
     "ReviewEditRequest",
+    "TriageCorrectionRequest",
     "KnowledgeBaseResponse",
     "MetricsSummary",
     "CategoryCount",

@@ -40,6 +40,15 @@ Each training run writes `model.joblib`, `metrics.json` and `report.md` (evaluat
 a new version, set `CATEGORY_MODEL_VERSION` / `URGENCY_MODEL_VERSION` (defaults `v1` / `v4`).
 Inference: `app.ml.category_model.predict_category(text)` and `app.ml.urgency_model.predict_urgency(text)`.
 
+## Feedback loop (Phase 6)
+
+```bash
+uv run python -m scripts.export_feedback    # reviewer corrections -> ../data/feedback/corrections.csv
+uv run python -m scripts.train_category_model --version v2   # picks the corrections up
+```
+
+See DECISIONS.md (Phase 6) for the retraining cycle.
+
 ## Migrations
 
 ```bash

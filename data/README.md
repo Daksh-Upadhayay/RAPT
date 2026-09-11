@@ -9,6 +9,7 @@
 | `eval/handwritten_test_set.csv` | 120 hand-written tickets with human `category` + `urgency` labels, written by Claude. Clean for category v1; used to diagnose urgency v1, so no longer clean for urgency | yes |
 | `eval/urgency_holdout_test.csv` | 50 tickets with `urgency` labels, written by the project owner. Scored once to choose urgency v2; since v3 part of the urgency **dev set** | yes |
 | `eval/urgency_fresh_test.csv` | 64 tickets (17 low / 30 medium / 17 high) written by the project owner after v3 was frozen. Scored once; chose urgency v3 over v2. Since v4 used as training data (with the dev set), so spent | yes |
+| `feedback/corrections.csv` | reviewers' triage corrections on real tickets, exported from the database by `export_feedback.py` (+ `corrections.manifest.json`). Real customer messages | no |
 | `eval/urgency_blind_eval_v2.csv` | 55 tickets (15 low / 15 medium / 25 high) written by the project owner after v4 was frozen. Scored once; confirmed v4 over v3. Now spent for decisions | yes |
 
 Rebuild (from `backend/`): `uv run python -m scripts.build_dataset` and
@@ -73,3 +74,19 @@ Used to label the hand-written set. The templates follow the same category rules
 - `medium`: something has gone wrong and needs action (damage, lateness, missing money,
   errors), or the customer is mildly frustrated, but none of the `high` signals apply.
 - `low`: informational questions or simple requests, with nothing broken and no pressure.
+
+## Reviewer corrections (Phase 6)
+
+`feedback/corrections.csv` is rebuilt from the database by (from `backend/`):
+
+```bash
+uv run python -m scripts.export_feedback
+```
+
+One row per corrected ticket: `text` (subject + body, as the classifiers read it), the
+reviewer's `category` and/or `urgency` (empty where not corrected), the model's labels and
+versions, who corrected it and when. Tickets whose text is in `eval/` are left out.
+`train_category_model.py` adds the category rows to its train split (weighted, see
+`--feedback-weight`); `train_urgency_model.py` treats the urgency rows as human labels.
+It is not committed: it holds customer messages, and each model's `metrics.json`
+records the sha256 and row count it was trained on.

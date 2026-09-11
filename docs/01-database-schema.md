@@ -41,6 +41,10 @@ Mock e-commerce order data, seeded with Faker.
 | status | TEXT | `new`, `in_progress`, `awaiting_review`, `resolved` (no `escalated` — escalated tickets stay `awaiting_review`, see `needs_escalation`) |
 | needs_escalation | BOOLEAN | nullable until the Escalation Agent runs |
 | escalation_reason | TEXT | nullable — which escalation rule fired |
+| corrected_category | TEXT | nullable — reviewer's category when it differs from the model's (Phase 6); same allowed values as `category` |
+| corrected_urgency | TEXT | nullable — reviewer's urgency when it differs from the model's (Phase 6) |
+| corrected_by | TEXT | nullable — reviewer who made the correction |
+| corrected_at | TIMESTAMPTZ | nullable — when the correction was made |
 | created_at | TIMESTAMPTZ | default now() |
 | updated_at | TIMESTAMPTZ | |
 

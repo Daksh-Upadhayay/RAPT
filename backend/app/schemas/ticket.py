@@ -28,6 +28,11 @@ class TicketResponse(BaseModel):
     status: TicketStatus
     needs_escalation: bool | None
     escalation_reason: str | None
+    # Reviewer's correction of the triage (null = no correction); see models/ticket.py
+    corrected_category: TicketCategory | None
+    corrected_urgency: TicketUrgency | None
+    corrected_by: str | None
+    corrected_at: datetime | None
     created_at: datetime
     updated_at: datetime
 

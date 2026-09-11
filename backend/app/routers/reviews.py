@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
 from app.core.db import SessionDep
-from app.schemas.review import ReviewApproveRequest, ReviewEditRequest
+from app.schemas.review import ReviewApproveRequest, ReviewEditRequest, TriageCorrectionRequest
 from app.schemas.ticket import TicketDetailResponse, TicketResponse
 from app.services import reviews as review_service
 from app.services import tickets as ticket_service
@@ -37,3 +37,19 @@ async def approve(ticket_id: UUID, data: ReviewApproveRequest, session: SessionD
 async def edit(ticket_id: UUID, data: ReviewEditRequest, session: SessionDep) -> TicketDetailResponse:
     """Approve the latest draft with the reviewer's edits; the ticket becomes resolved."""
     return await _approve(session, ticket_id, data.reviewer_id, edited_text=data.edited_text)
+
+
+@router.put("/{ticket_id}/triage")
+async def correct_triage(ticket_id: UUID, data: TriageCorrectionRequest, session: SessionDep) -> TicketDetailResponse:
+    """Set (or clear) the reviewer's correction of the ticket's category and urgency.
+
+    Allowed on any triaged ticket, before or after approval. The model's labels are kept;
+    corrections feed the training data (scripts/export_feedback.py).
+    """
+    try:
+        await review_service.correct_triage(session, ticket_id, data)
+    except review_service.TicketNotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found") from exc
+    except review_service.NotTriaged as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Ticket has not been triaged yet") from exc
+    return TicketDetailResponse.model_validate(await ticket_service.get_ticket_detail(session, ticket_id))

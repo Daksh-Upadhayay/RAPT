@@ -89,3 +89,6 @@ logs/
 *~
 .DS_Store
 Thumbs.db
+
+# Reviewer corrections exported from the database (real customer messages): scripts/export_feedback.py
+data/feedback/

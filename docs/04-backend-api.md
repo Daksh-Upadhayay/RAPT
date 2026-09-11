@@ -63,6 +63,10 @@ the separation between persistence layer and API contract layer").
   (body: `{"reviewer_id": str}`; 409 if the ticket isn't awaiting review or has no pending draft)
 - `POST /reviews/{ticket_id}/edit` — submit edited text, mark approved with
   edits, ticket resolved
+- `PUT /reviews/{ticket_id}/triage` — set or clear the reviewer's correction of the
+  category/urgency (Phase 6; body: `{"corrected_category", "corrected_urgency", "reviewer_id"}`,
+  a value equal to the model's label counts as no correction; 409 if not triaged yet).
+  Allowed before or after approval. The review queue sorts by the corrected urgency.
 
 ### Knowledge base
 - `GET /knowledge-base` — list entries

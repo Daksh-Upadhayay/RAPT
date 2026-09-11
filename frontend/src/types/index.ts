@@ -76,6 +76,11 @@ export interface TicketResponse {
   status: TicketStatus
   needs_escalation: boolean | null
   escalation_reason: string | null
+  // A reviewer's correction of the triage; null = no correction (the model's label stands)
+  corrected_category: TicketCategory | null
+  corrected_urgency: TicketUrgency | null
+  corrected_by: string | null
+  corrected_at: ISODateTime | null
   created_at: ISODateTime
   updated_at: ISODateTime
 }
@@ -114,6 +119,12 @@ export interface ReviewApproveRequest {
 
 export interface ReviewEditRequest {
   edited_text: string
+  reviewer_id: string
+}
+
+export interface TriageCorrectionRequest {
+  corrected_category?: TicketCategory | null
+  corrected_urgency?: TicketUrgency | null
   reviewer_id: string
 }
 

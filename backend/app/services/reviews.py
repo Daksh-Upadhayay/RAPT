@@ -4,11 +4,12 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import case, nulls_last, select
+from sqlalchemy import case, func, nulls_last, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import TicketStatus, TicketUrgency
 from app.models import DraftResponse, Ticket
+from app.schemas.review import TriageCorrectionRequest
 
 
 class TicketNotFound(Exception):
@@ -20,10 +21,11 @@ class ReviewConflict(Exception):
 
 
 async def review_queue(session: AsyncSession) -> Sequence[Ticket]:
-    """Tickets awaiting review: escalated first, then by urgency, then oldest first."""
+    """Tickets awaiting review: escalated first, then by urgency (a reviewer's correction
+    wins over the model's), then oldest first."""
     urgency_rank = case(
         {TicketUrgency.HIGH.value: 0, TicketUrgency.MEDIUM.value: 1, TicketUrgency.LOW.value: 2},
-        value=Ticket.urgency,
+        value=func.coalesce(Ticket.corrected_urgency, Ticket.urgency),
         else_=3,
     )
     stmt = (
@@ -60,4 +62,28 @@ async def approve(session: AsyncSession, ticket_id: UUID, reviewer_id: str, edit
     draft.reviewer_id = reviewer_id
     draft.reviewed_at = datetime.now(UTC)
     ticket.status = TicketStatus.RESOLVED
+    await session.commit()
+
+
+class NotTriaged(Exception):
+    """The Triage Agent hasn't labelled the ticket yet, so there is nothing to correct."""
+
+
+async def correct_triage(session: AsyncSession, ticket_id: UUID, data: TriageCorrectionRequest) -> None:
+    """Record the reviewer's category/urgency, replacing any earlier correction.
+
+    A value equal to the model's label is stored as null: only disagreements are
+    corrections, and only they become training rows (scripts/export_feedback.py).
+    """
+    ticket = await session.get(Ticket, ticket_id)
+    if ticket is None:
+        raise TicketNotFound
+    if ticket.category is None or ticket.urgency is None:
+        raise NotTriaged
+    category = data.corrected_category if data.corrected_category != ticket.category else None
+    urgency = data.corrected_urgency if data.corrected_urgency != ticket.urgency else None
+    ticket.corrected_category, ticket.corrected_urgency = category, urgency
+    corrected = category is not None or urgency is not None
+    ticket.corrected_by = data.reviewer_id if corrected else None
+    ticket.corrected_at = datetime.now(UTC) if corrected else None
     await session.commit()

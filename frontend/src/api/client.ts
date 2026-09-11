@@ -28,7 +28,7 @@ type Query = Record<string, string | number | undefined>
 
 export async function request<T>(
   path: string,
-  options: { method?: 'GET' | 'POST'; body?: unknown; query?: Query } = {},
+  options: { method?: 'GET' | 'POST' | 'PUT'; body?: unknown; query?: Query } = {},
 ): Promise<T> {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(options.query ?? {})) {

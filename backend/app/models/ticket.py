@@ -17,6 +17,8 @@ class Ticket(Base):
         check_in("category", TicketCategory),
         check_in("urgency", TicketUrgency),
         check_in("status", TicketStatus),
+        check_in("corrected_category", TicketCategory),
+        check_in("corrected_urgency", TicketUrgency),
     )
 
     id: Mapped[uuid.UUID] = uuid_pk()
@@ -31,6 +33,12 @@ class Ticket(Base):
     # null until the Escalation Agent runs; escalated tickets still go through review
     needs_escalation: Mapped[bool | None] = mapped_column(Boolean)
     escalation_reason: Mapped[str | None] = mapped_column(Text)
+    # A reviewer's correction of the Triage Agent (Phase 6). category/urgency keep the
+    # model's labels; each corrected_* is null unless the reviewer chose a different value.
+    corrected_category: Mapped[str | None] = mapped_column(Text)
+    corrected_urgency: Mapped[str | None] = mapped_column(Text)
+    corrected_by: Mapped[str | None] = mapped_column(Text)
+    corrected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at_column()
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

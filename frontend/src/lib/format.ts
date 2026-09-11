@@ -1,4 +1,4 @@
-import type { AgentName, OrderStatus, TicketCategory, TicketStatus, TicketUrgency } from '../types'
+import type { AgentName, OrderStatus, TicketCategory, TicketResponse, TicketStatus, TicketUrgency } from '../types'
 
 export const CATEGORY_LABELS: Record<TicketCategory, string> = {
   order_status: 'Order status',
@@ -101,3 +101,7 @@ export function calendarDate(isoDate: string, options: Intl.DateTimeFormatOption
 export function money(amount: string | number): string {
   return new Intl.NumberFormat('en', { style: 'currency', currency: 'USD' }).format(Number(amount))
 }
+
+/** The labels to show: a reviewer's correction wins over the model's. */
+export const effectiveCategory = (t: TicketResponse): TicketCategory | null => t.corrected_category ?? t.category
+export const effectiveUrgency = (t: TicketResponse): TicketUrgency | null => t.corrected_urgency ?? t.urgency

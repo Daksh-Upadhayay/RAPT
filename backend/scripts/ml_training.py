@@ -15,7 +15,13 @@ import sklearn
 import xgboost
 from sklearn.base import clone
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_recall_fscore_support, recall_score
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_recall_fscore_support,
+    recall_score,
+)
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.utils.class_weight import compute_sample_weight
 from xgboost import XGBClassifier
@@ -28,6 +34,8 @@ DATASET_PATH = DATA_DIR / "processed" / "tickets.csv"
 HANDWRITTEN_PATH = DATA_DIR / "eval" / "handwritten_test_set.csv"
 URGENCY_HOLDOUT_PATH = DATA_DIR / "eval" / "urgency_holdout_test.csv"
 URGENCY_FRESH_PATH = DATA_DIR / "eval" / "urgency_fresh_test.csv"
+# Reviewer corrections exported from the database by scripts/export_feedback.py (not in git)
+FEEDBACK_PATH = DATA_DIR / "feedback" / "corrections.csv"
 SEED = 42
 CONFIDENCE_THRESHOLD = 0.6  # the Escalation Agent's cut-off (03-agent-architecture.md)
 
@@ -57,7 +65,30 @@ def load_urgency_human() -> pd.DataFrame:
     clean test any more; v4 needs a new fresh set."""
     dev = load_urgency_dev().assign(source="dev")
     fresh = pd.read_csv(URGENCY_FRESH_PATH)[["text", "urgency"]].assign(source="fresh_v3")
-    return pd.concat([dev, fresh], ignore_index=True)
+    # Reviewers' urgency corrections on real tickets (Phase 6), when exported
+    feedback = load_feedback("urgency").assign(source="feedback")
+    return pd.concat([dev, fresh, feedback], ignore_index=True)
+
+
+def load_feedback(label: str, path: Path = FEEDBACK_PATH) -> pd.DataFrame:
+    """Real tickets whose `label` ("category" or "urgency") a reviewer corrected:
+    columns `text` and `label`. Empty if nothing has been exported yet."""
+    if not path.exists():
+        return pd.DataFrame({"text": pd.Series(dtype=str), label: pd.Series(dtype=str)})
+    df = pd.read_csv(path, dtype=str, keep_default_na=False)
+    return df.loc[df[label] != "", ["text", label]].reset_index(drop=True)
+
+
+def feedback_metadata(label: str, path: Path = FEEDBACK_PATH, weight: float | None = None) -> dict:
+    """What a model was trained with, so scripts/export_feedback.py can tell whether newer
+    corrections exist than the served model has seen."""
+    rows = len(load_feedback(label, path))
+    return {
+        "path": str(path.relative_to(DATA_DIR.parent)) if path.is_relative_to(DATA_DIR.parent) else str(path),
+        "sha256": file_sha256(path) if path.exists() else None,
+        "rows": rows,
+        **({"weight": weight} if weight is not None else {}),
+    }
 
 
 def tune_class_weights(
@@ -112,15 +143,19 @@ def train_xgboost(
     val: tuple[Sequence[str], np.ndarray],
     max_depths: Sequence[int] = (4, 6),
     balance_classes: bool = False,
+    sample_weight: np.ndarray | None = None,
 ) -> Trained:
     """Fit TF-IDF(+extra) features on train, then pick XGBoost depth by val macro-F1.
 
     The number of trees is chosen by early stopping on the val split (val mlogloss).
-    The test split is never touched here.
+    The test split is never touched here. `sample_weight` up-weights rows (e.g. reviewer
+    corrections); it multiplies the class balancing when both are used.
     """
     features = clone(features).fit(train[0])
     X_train, X_val = features.transform(train[0]), features.transform(val[0])
     weights = compute_sample_weight("balanced", train[1]) if balance_classes else None
+    if sample_weight is not None:
+        weights = sample_weight if weights is None else weights * sample_weight
 
     best, best_score, selection = None, -1.0, []
     for depth in max_depths:
@@ -146,10 +181,12 @@ def train_xgboost(
     return best
 
 
-def train_logreg_baseline(features: FeatureUnion, train: tuple[Sequence[str], np.ndarray]) -> Pipeline:
+def train_logreg_baseline(
+    features: FeatureUnion, train: tuple[Sequence[str], np.ndarray], sample_weight: np.ndarray | None = None
+) -> Pipeline:
     """Same features + logistic regression: the simple baseline XGBoost has to beat."""
     pipeline = Pipeline([("features", clone(features)), ("clf", LogisticRegression(max_iter=3000, C=5.0))])
-    return pipeline.fit(*train)
+    return pipeline.fit(*train, clf__sample_weight=sample_weight)
 
 
 def train_logreg(
@@ -261,7 +298,7 @@ def md_confidence(results: dict[str, dict]) -> str:
         f"| eval set | mean confidence | share < {CONFIDENCE_THRESHOLD} | accuracy when ≥ {CONFIDENCE_THRESHOLD} | accuracy when < {CONFIDENCE_THRESHOLD} |",
         "|---|---|---|---|---|",
     ]
-    fmt = lambda v: "n/a" if v is None else f"{v:.2f}"  # noqa: E731
+    fmt = lambda v: "n/a" if v is None else f"{v:.2f}"
     for name, r in results.items():
         c = r["confidence"]
         lines.append(

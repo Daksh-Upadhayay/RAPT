@@ -658,3 +658,83 @@ from or fills gaps in the spec docs. Newest phase at the bottom.
   arrived, tracking hasn't moved" as `damaged_item` (0.59). The low-confidence rule
   escalated it, as designed. The category model is weak on this phrasing and could be
   revisited in Phase 6 with reviewer corrections.
+
+---
+
+## Phase 6 — Feedback loop
+
+### Corrections live next to the model's labels
+- **Decision:** `tickets.corrected_category` and `corrected_urgency` (nullable, same CHECK
+  values as `category`/`urgency`), plus `corrected_by` and `corrected_at`. The model's
+  `category`/`urgency` are never overwritten.
+- **Why:** keeping both makes the disagreement itself the data: it is what becomes a
+  training row, and it lets model accuracy on reviewed tickets be measured later.
+  `corrected_by`/`corrected_at` are beyond the spec's two fields: an audit trail, and the
+  export orders by them.
+- **Only disagreements count:** a value equal to the model's label is stored as null, so
+  "no correction" has one meaning. Not correcting is *not* treated as confirming the
+  model's label: reviewers mostly look at the draft, so silence is weak evidence.
+
+### Endpoint and UI
+- **Decision:** `PUT /reviews/{ticket_id}/triage` with the full correction (replace
+  semantics, so a correction can be changed or cleared). Allowed on any triaged ticket,
+  before or after approval; 409 before triage.
+- **UI:** "Correct the triage" in the ticket's Triage card: two dropdowns marked with the
+  model's choice. Corrected labels show everywhere with a pencil mark, and the card keeps
+  "model: X" next to each correction.
+- **Queue order uses the corrected urgency.** A reviewer who raises a ticket to high
+  sees it move up. The escalation flag is not recomputed: it records what the agents
+  decided, and a rerun would recompute it from fresh predictions anyway.
+
+### The pipeline: export, then train
+- **Export:** `scripts/export_feedback.py` rebuilds `data/feedback/corrections.csv` from
+  the database on every run (a full snapshot, written atomically, with a manifest).
+  A snapshot rather than an append-only log, because corrections can be changed or
+  cleared, and reruns must not duplicate rows. Rows use the same `subject\nbody` text the
+  classifiers read at inference (`app.agents.state.ticket_text`), and carry the model
+  version that made the corrected prediction.
+- **Evaluation sets stay clean:** tickets whose text (or body) matches any file in
+  `data/eval/` are dropped, so a reviewer pasting a test ticket can't leak it into training.
+- **Not in git:** the file holds real customer messages. Each trained model's
+  `metrics.json` records the export's sha256 and row count, which is enough to reproduce
+  or audit a run on the machine that has the data.
+- **Category training:** `train_category_model.py` adds the category corrections to the
+  train split only (val/test/hand-written unchanged), weighted by `--feedback-weight`
+  (default 10). Corrections are real tickets the model got wrong, and few next to 3,773
+  synthetic rows, so they need weight to matter. 10 is a starting point, not a measured
+  value; once there are ~50 corrections, pick it by cross-validation over them, as urgency
+  v4 does for `human_weight`.
+- **Urgency training:** urgency corrections join `load_urgency_human()` as source
+  `feedback`, so the existing v4 procedure (5-fold CV over human tickets, choosing
+  `human_weight` and class weights) uses them without new code.
+- **Checked:** a throwaway category run with a one-row corrections file trained, recorded
+  the feedback metadata, and was deleted. Tests cover the endpoint, the export (labels only
+  where corrected, eval overlap, model versions, reruns) and the loaders.
+
+### How this feeds a retraining cycle (not automated)
+1. **Nightly:** run `export_feedback`. It prints, for each served model, how many
+   exported corrections that model was not trained on.
+2. **Trigger:** retrain when a model has enough new corrections to move the numbers:
+   about 50 for category (a few per class), or when a reviewer-visible error pattern
+   repeats. Retraining on every correction would mostly add noise and churn versions.
+3. **Train a new version:** `train_category_model --version v2` /
+   `train_urgency_model --version v5`. Artifacts are new directories; nothing served
+   changes.
+4. **Gate:** the candidate must beat the served version on data it has not seen: a fresh
+   hand-written set (as urgency v2-v4 were chosen), and the cross-validated scores on the
+   corrections. It must not regress on the existing sets. Corrections used in training
+   can't also be the test, so hold some back, or wait for new ones.
+5. **Promote:** set `CATEGORY_MODEL_VERSION` / `URGENCY_MODEL_VERSION` and restart. New
+   predictions record the new version in `model_predictions`, so before/after correction
+   rates can be compared per version.
+6. **Roll back:** point the setting back at the old version; artifacts are never deleted.
+
+- **Out of scope, on purpose:** a scheduler, automatic promotion, and drift monitoring.
+  Step 4 needs a human judgement on small data; automating promotion on a handful of
+  corrections would ship regressions.
+- **Known bias:** corrections only come from tickets someone looked at closely, and
+  reviewers fix what they notice, so the rows lean towards obvious mistakes. Weighting
+  them up amplifies that. The gate in step 4 is the guard.
+- **First real signal:** during testing the category model twice labelled "it still
+  hasn't arrived, tracking hasn't moved" as `damaged_item`. That's exactly the kind of
+  correction this loop is for.
