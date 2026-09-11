@@ -11,7 +11,7 @@ import type {
   OrderLookupResult,
   TicketDetailResponse,
   UrgencyPrediction,
-} from '../types'
+} from '../../types'
 
 export interface RetrievedHit {
   id: string

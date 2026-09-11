@@ -738,3 +738,37 @@ from or fills gaps in the spec docs. Newest phase at the bottom.
 - **First real signal:** during testing the category model twice labelled "it still
   hasn't arrived, tracking hasn't moved" as `damaged_item`. That's exactly the kind of
   correction this loop is for.
+
+---
+
+## Frontend redesign and modular structure
+
+### Structure: a UI kit, feature modules, thin pages
+- **Decision:** `src/ui/` holds presentational primitives (Button, Tag, Sheet, Field,
+  Segmented, Meter, PageHeader, feedback states). `src/features/<area>/` owns each
+  area's data hooks and components (tickets, review, trace, intake, metrics, reviewer)
+  and exposes them through `index.ts`. Pages only compose features and read the URL.
+- **Why:** pages had grown their own queries, mutations and styling. Hooks such as
+  `useApproveDraft` and `useCorrectTriage` now live next to the components that use
+  them, cache updates happen in one place (`useApplyTicketUpdate`), and a restyle
+  touches the kit, not every page.
+- `types/index.ts` stays where it is: `backend/tests/test_frontend_types.py` reads it.
+
+### Visual direction: "dispatch desk"
+- **Decision:** design tokens in `index.css` (`@theme`): paper, ground, ink (three
+  steps), line, postal-yellow accent, stop-red danger, ok green; a Bringhurst type scale;
+  3 px label corners; no shadows. One typeface, Archivo (self-hosted variable font),
+  with heavy expanded width for ticket subjects and titles.
+- **Why:** the subject is e-commerce order support, so the vocabulary comes from parcel
+  logistics: shipping labels, packing slips, tracking histories. The earlier look (slate,
+  indigo, rounded cards with shadows) was a generic SaaS kit.
+- **Restraint:** the bold element is the ticket label (expanded subject on a 2 px
+  black rule). Everything else stays quiet. Yellow is only for the primary action, the
+  queue count and the active nav item; red only for escalation and errors. Chart
+  category colours are unchanged (still the validated palette).
+- **Copy:** buttons say what happens ("Approve draft", "Approve my edits", "Save
+  correction", "Run the agents again"). A resolved ticket shows "Approved reply", not
+  "Reply sent", since nothing is emailed to the customer.
+- **Checked:** every page at 1280 px and 390 px in headless Chrome, with real tickets
+  (created for the check and deleted afterwards), including the failed-draft state from
+  a real Gemini 504. No console errors, no horizontal scroll.

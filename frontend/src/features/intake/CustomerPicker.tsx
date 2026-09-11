@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useId, useState } from 'react'
-import { customerKeys, getCustomer, getOrder, searchCustomers } from '../api/customers'
-import { ORDER_STATUS_LABELS } from '../lib/format'
-import type { CustomerResponse, OrderResponse } from '../types'
-import { Spinner } from './icons'
+import { customerKeys, getCustomer, getOrder, searchCustomers } from '../../api/customers'
+import { ORDER_STATUS_LABELS } from '../../lib/format'
+import type { CustomerResponse, OrderResponse } from '../../types'
+import { Input, Spinner } from '../../ui'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -88,16 +88,15 @@ export function CustomerPicker({ invalid, onSelect }: {
 
   return (
     <div className="relative">
-      <input
+      <Input
         id="customer"
         role="combobox"
         aria-expanded={open}
         aria-controls={listId}
         aria-activedescendant={open && options[active] ? `${listId}-${active}` : undefined}
-        aria-invalid={invalid}
+        invalid={invalid}
         autoComplete="off"
-        className={`input ${invalid ? 'border-red-400' : ''}`}
-        placeholder="Search by name or email, or paste an order ID"
+        placeholder="Name, email or order ID"
         value={query}
         onChange={(e) => {
           setQuery(e.target.value)
@@ -108,16 +107,16 @@ export function CustomerPicker({ invalid, onSelect }: {
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         onKeyDown={onKeyDown}
       />
-      {(loading || picking) && <Spinner className="absolute top-2.5 right-3 text-slate-400" />}
-      {pickError && <p className="mt-1 text-xs text-red-700">{pickError}</p>}
+      {(loading || picking) && <Spinner className="absolute top-3 right-3 text-ink-3" />}
+      {pickError && <p className="mt-1.5 text-tiny font-medium text-danger-ink">{pickError}</p>}
       {open && (
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+          className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-label border border-ink bg-paper py-1"
         >
           {options.length === 0 && !loading && (
-            <li className="px-3 py-2 text-sm text-slate-500">
+            <li className="px-3 py-2 text-small text-ink-2">
               {isOrderId ? 'No order with that ID.' : 'No matching customers.'}
             </li>
           )}
@@ -130,17 +129,17 @@ export function CustomerPicker({ invalid, onSelect }: {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => void choose(option)}
               onMouseEnter={() => setActive(i)}
-              className={`cursor-pointer px-3 py-2 text-sm ${i === active ? 'bg-indigo-50' : ''}`}
+              className={`cursor-pointer px-3 py-2 text-small ${i === active ? 'bg-accent-wash' : ''}`}
             >
               {option.kind === 'customer' ? (
                 <>
-                  <span className="font-medium text-slate-900">{option.customer.name}</span>
-                  <span className="ml-2 text-slate-500">{option.customer.email}</span>
+                  <span className="font-semibold">{option.customer.name}</span>
+                  <span className="ml-2 text-ink-2">{option.customer.email}</span>
                 </>
               ) : (
                 <>
-                  <span className="font-medium text-slate-900">Order: {option.order.item_name}</span>
-                  <span className="ml-2 text-slate-500">
+                  <span className="font-semibold">Order: {option.order.item_name}</span>
+                  <span className="ml-2 text-ink-2">
                     {ORDER_STATUS_LABELS[option.order.status]} · selects its customer and links the order
                   </span>
                 </>

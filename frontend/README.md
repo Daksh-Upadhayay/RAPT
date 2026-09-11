@@ -28,16 +28,43 @@ npm run preview    # serve the build, with the same /api proxy
 npm run lint       # oxlint
 ```
 
-## Layout
+## Structure
 
 ```
 src/
+  index.css        design tokens (colour, type scale, radius) + the label typeface
+  ui/              the UI kit: Button, Tag, Sheet, Field/Input/Select/Textarea, Segmented,
+                   Meter, PageHeader, Loading/ErrorNotice/EmptyState, icons. No data
+                   fetching, no business rules; import from '../ui'
+  features/        one folder per area; each owns its data hooks and components and
+                   exports its public pieces from index.ts
+    tickets/       useTicket, useAgentTrace, tags, TicketStrip (queue row), TicketLabel (header)
+    review/        useReviewQueue, useApproveDraft, useCorrectTriage, DraftEditor,
+                   TriageCard, OrderSlip, GroundingList, ReviewPanel
+    trace/         run grouping + log parsing (model.ts), TraceTimeline
+    intake/        SubmitTicketForm, CustomerPicker
+    metrics/       MetricsOverview, charts, ChartCard, chart theme
+    reviewer/      "Reviewing as" identity (provider, hook, field)
+  pages/           thin: compose features into a screen, handle the URL
+  app/             AppShell (header + nav), queryClient
+  api/             fetch wrapper (client.ts) + one module per backend resource
+  lib/format.ts    labels, colours, number/date formatting
   types/index.ts   TypeScript mirrors of the backend's Pydantic schemas
-  api/             fetch wrapper (client.ts) + one module per resource
-  lib/             formatting, agent-trace parsing, reviewer identity, chart ink
-  components/      badges, ticket card, draft editor, agent step card, charts, ...
-  pages/           ReviewQueue, TicketDetail, SubmitTicket, AgentTrace, Dashboard
 ```
+
+Rules of thumb: pages import from `features/*` and `ui`; features import from `ui`,
+`api`, `lib` and other features' `index.ts`; `ui` imports nothing app-specific.
+Components use token classes (`bg-paper`, `text-ink-2`, `border-line`, `bg-accent`),
+never raw hex or Tailwind's stock palette.
+
+## Design
+
+"Dispatch desk": the look of parcel logistics. White label stock (`paper`) on a
+depot-grey page (`ground`), black print (`ink`), postal yellow (`accent`) for the
+primary action and anything needing attention, stop red (`danger`) for escalation only.
+One typeface, Archivo, whose width axis gives the signature treatment: ticket subjects
+and page titles in heavy expanded type (`type-label`). The agent trace reads like a
+carrier's tracking history.
 
 ## Keeping the types in sync
 

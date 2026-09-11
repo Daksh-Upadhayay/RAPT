@@ -1,32 +1,21 @@
-import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { getReviewQueue, reviewKeys } from '../api/reviews'
-import { listTickets, ticketKeys } from '../api/tickets'
-import { TicketCard } from '../components/TicketCard'
-import { EmptyState, ErrorMessage, Loading, PageHeader } from '../components/ui'
+import { useReviewQueue } from '../features/review'
+import { TicketStrip, useTicketsWithStatus } from '../features/tickets'
+import { ButtonLink, EmptyState, ErrorNotice, Loading, PageHeader } from '../ui'
 
-function Processing() {
-  // Tickets the agents are still working on: they join the queue when the run ends
-  const { data = [] } = useQuery({
-    queryKey: ticketKeys.list({ status: 'in_progress' }),
-    queryFn: () => listTickets({ status: 'in_progress' }),
-    refetchInterval: 3000,
-  })
-  const { data: fresh = [] } = useQuery({
-    queryKey: ticketKeys.list({ status: 'new' }),
-    queryFn: () => listTickets({ status: 'new' }),
-    refetchInterval: 3000,
-  })
-  const running = [...fresh, ...data]
-  if (!running.length) return null
+function WithTheAgents() {
+  const fresh = useTicketsWithStatus('new')
+  const running = useTicketsWithStatus('in_progress')
+  const tickets = [...(fresh.data ?? []), ...(running.data ?? [])]
+  if (!tickets.length) return null
   return (
-    <section className="mb-8">
-      <h2 className="mb-3 text-sm font-semibold text-slate-700">
-        Agents working <span className="font-normal text-slate-400">({running.length})</span>
+    <section className="mb-10" aria-labelledby="with-agents">
+      <h2 id="with-agents" className="type-heading mb-3 text-small text-ink-2">
+        With the agents ({tickets.length})
       </h2>
       <div className="space-y-2">
-        {running.map((t) => (
-          <TicketCard key={t.id} ticket={t} showStatus />
+        {tickets.map((t) => (
+          <TicketStrip key={t.id} ticket={t} showStatus />
         ))}
       </div>
     </section>
@@ -34,42 +23,37 @@ function Processing() {
 }
 
 export function ReviewQueue() {
-  const queue = useQuery({ queryKey: reviewKeys.queue, queryFn: getReviewQueue, refetchInterval: 5000 })
+  const queue = useReviewQueue()
   const escalated = queue.data?.filter((t) => t.needs_escalation).length ?? 0
 
   return (
     <>
       <PageHeader
         title="Review queue"
-        subtitle="Every AI draft is checked by a person before it goes out. Escalated tickets first, then by urgency, then oldest."
-        actions={
-          <Link to="/submit" className="btn-secondary">
-            Submit a ticket
-          </Link>
-        }
+        intro="Every AI draft waits here for a person to check it. Escalated tickets come first, then the most urgent, then the oldest."
+        actions={<ButtonLink to="/submit">Submit a ticket</ButtonLink>}
       />
-      <Processing />
+      <WithTheAgents />
       {queue.isPending ? (
         <Loading label="Loading the queue…" />
       ) : queue.isError ? (
-        <ErrorMessage error={queue.error} onRetry={() => void queue.refetch()} />
+        <ErrorNotice error={queue.error} onRetry={() => void queue.refetch()} />
       ) : queue.data.length === 0 ? (
         <EmptyState title="Nothing to review">
-          New tickets appear here once the agents finish.{' '}
-          <Link to="/submit" className="font-medium text-indigo-600 hover:underline">
-            Submit one
+          Tickets arrive here once the agents have drafted a reply.{' '}
+          <Link to="/submit" className="font-semibold text-ink underline underline-offset-2">
+            Submit a ticket
           </Link>{' '}
-          to try it.
+          to start one.
         </EmptyState>
       ) : (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">
-            Awaiting review <span className="font-normal text-slate-400">({queue.data.length})</span>
-            {escalated > 0 && <span className="ml-2 font-medium text-red-700">{escalated} escalated</span>}
+        <section aria-labelledby="awaiting">
+          <h2 id="awaiting" className="type-heading mb-3 text-small text-ink-2">
+            Awaiting review ({queue.data.length}){escalated > 0 && <span className="text-danger-ink">, {escalated} escalated</span>}
           </h2>
           <div className="space-y-2">
             {queue.data.map((t) => (
-              <TicketCard key={t.id} ticket={t} />
+              <TicketStrip key={t.id} ticket={t} />
             ))}
           </div>
         </section>

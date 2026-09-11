@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { ReviewerContext } from './reviewerContext'
+import { ReviewerContext } from './context'
 
 /** Placeholder reviewer identity (there is no auth yet), remembered in this browser. */
 const STORAGE_KEY = 'rapt.reviewerId'

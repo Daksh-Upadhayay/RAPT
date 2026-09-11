@@ -1,37 +1,79 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/archivo/standard.css';
 
+/*
+ * Design tokens: "dispatch desk". Parcel-logistics vernacular: white label stock on a
+ * cool depot-grey ground, true black print, postal yellow for the one thing that needs
+ * attention, stop red for escalation only. Components use these names, never raw hex.
+ */
 @theme {
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Archivo Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --color-ground: #e4e6e1; /* page: depot grey */
+  --color-paper: #ffffff; /* sheets: label stock */
+  --color-sunken: #f1f2ef; /* wells inside a sheet */
+  --color-ink: #000000; /* thermal print */
+  --color-ink-2: #474b47; /* secondary text */
+  --color-ink-3: #6b706b; /* muted text, 4.8:1 on paper */
+  --color-line: #cfd2cc; /* dividers and borders */
+  --color-accent: #ffcc00; /* postal yellow: primary action, attention */
+  --color-accent-deep: #f0b800;
+  --color-accent-wash: #fff6cc;
+  --color-danger: #d7261e; /* stop red: escalation and errors only */
+  --color-danger-ink: #a51b15;
+  --color-danger-wash: #fdeceb;
+  --color-ok: #1d7a3a;
+  --color-ok-wash: #e5f3e9;
+
+  --radius-label: 3px; /* label stock corners, not pills */
+
+  /* Type scale (Bringhurst): 12 / 14 / 16 / 21 / 28 / 36 */
+  --text-tiny: 0.75rem;
+  --text-tiny--line-height: 1.1rem;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.3rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.6rem;
+  --text-heading: 1.3125rem;
+  --text-heading--line-height: 1.75rem;
+  --text-title: 1.75rem;
+  --text-title--line-height: 2.1rem;
+  --text-display: 2.25rem;
+  --text-display--line-height: 2.5rem;
 }
 
 @layer base {
   html {
     color-scheme: light;
+    font-feature-settings: 'tnum' 0;
   }
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-ground font-sans text-body text-ink antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-/* Shared control styles (@utility so they compose with @apply and other utilities) */
-@utility badge {
-  @apply inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium whitespace-nowrap text-slate-700;
+/* The signature treatment: expanded heavy type, as on a shipping label's routing line */
+@utility type-label {
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: -0.015em;
 }
-@utility btn {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50;
-}
-@utility btn-primary {
-  @apply btn bg-indigo-600 text-white hover:bg-indigo-700 disabled:hover:bg-indigo-600;
-}
-@utility btn-secondary {
-  @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 disabled:hover:bg-white;
-}
-@utility btn-ghost {
-  @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900;
-}
-@utility input {
-  @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none;
-}
-@utility label {
-  @apply mb-1.5 block text-sm font-medium text-slate-800;
+
+/* Wide-but-calm type for section headings */
+@utility type-heading {
+  font-stretch: 112%;
+  font-weight: 700;
 }

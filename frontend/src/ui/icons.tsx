@@ -65,9 +65,21 @@ export const SkipIcon = (p: IconProps) => (
 
 export function Spinner({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 20 20" width={16} height={16} className={`animate-spin ${className}`} aria-hidden="true">
+    <svg viewBox="0 0 20 20" width={16} height={16} className={`animate-spin motion-reduce:animate-none ${className}`} aria-hidden="true">
       <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" strokeOpacity="0.2" strokeWidth="2.5" />
       <path d="M17 10a7 7 0 0 0-7-7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
+  )
+}
+
+/** Marks a label a reviewer corrected (pencil + screen-reader text). */
+export function CorrectedMark() {
+  return (
+    <span className="inline-flex items-center text-ink-2">
+      <Icon width={12} height={12}>
+        <path d="m13.5 3.5 3 3L7 16H4v-3z" />
+      </Icon>
+      <span className="sr-only">(corrected)</span>
+    </span>
   )
 }
