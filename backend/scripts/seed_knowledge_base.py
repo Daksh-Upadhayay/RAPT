@@ -1,7 +1,7 @@
 """Embed the knowledge-base entries in data/knowledge_base.json and insert them.
 
 Each entry is embedded as "title. content" with the configured embedding model. Entries
-longer than the model reads (256 tokens for MiniLM) are rejected rather than silently
+longer than the model reads (512 tokens for bge-small) are rejected rather than silently
 truncated. The `categories` field in the JSON is not stored; scripts/evaluate_retrieval.py
 uses it to check that search returns entries relevant to a ticket's category.
 

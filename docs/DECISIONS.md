@@ -386,6 +386,8 @@ from or fills gaps in the spec docs. Newest phase at the bottom.
   endpoint). It is already loaded for urgency v4's features, so one copy serves both, and
   it's plenty for a few dozen short policy entries. An API model (e.g. Voyage) would
   need a new migration and a re-embed.
+- **Superseded in Phase 4:** knowledge search now uses `BAAI/bge-small-en-v1.5` (also
+  384-d); see "Knowledge search: bge-small replaces MiniLM" under Phase 4.
 
 ### Entries must fit in the model's 256-token window
 - **Decision:** `embed_document` rejects entries longer than the model reads: the API
@@ -395,6 +397,7 @@ from or fills gaps in the spec docs. Newest phase at the bottom.
   later paragraphs would be unsearchable without anyone noticing. Entries are short
   single-topic policies instead of chunked documents; if long documents are ever
   needed, chunking belongs in the seed step.
+- **Since Phase 4:** the limit is 512 tokens, bge-small's window. The rule is unchanged.
 
 ### Cosine distance with an HNSW index, vectors stored normalised
 - **Decision:** search orders by pgvector's cosine distance (`<=>`) and returns
@@ -437,3 +440,145 @@ from or fills gaps in the spec docs. Newest phase at the bottom.
   benchmark.
 - **Known weakness:** strongly worded tickets ("10 days late, I want this escalated")
   can pull up general support entries ahead of the delay policy.
+- **Revisited in Phase 4:** the category-level hit hid a weak delay-policy entry. The
+  model change and a reworded entry fixed it (hit@3 1.00, no misses); see Phase 4.
+
+### Open question from Phase 1, resolved: `OrderLookupResult.amount` is a float
+- **Decision:** the tool schema follows the spec (`float`); the database and `GET /orders`
+  keep exact `Decimal`. The only calculation is a comparison with the $100 refund
+  threshold, where float precision doesn't matter.
+
+---
+
+## Phase 4 — LangGraph agent pipeline
+
+### Graph exactly as specified, dependencies via LangGraph's runtime context
+- **Decision:** `app/agents/graph.py` wires triage → knowledge → [order linked?] →
+  order_lookup → draft → escalation. Nodes get the DB session and the drafter through
+  LangGraph's `context_schema` (`AgentContext`), not globals, so tests inject a test
+  database and a fake LLM.
+- **Logging:** the `@logged` wrapper writes one `agent_logs` row per node: input (the
+  state fields it reads, or the full prompt for the draft), output, tool calls, and
+  duration. A failing node still logs, with an `error` output.
+- **Commit per node:** each node's writes land together with its log, and the trace
+  fills in live. It also keeps `created_at` (Postgres `now()` is per transaction)
+  distinct per step, so trace order is reliable.
+- **Pitfall found:** `functools.wraps` on the node wrapper made LangGraph read the inner
+  function's signature and stop passing `runtime`, so every node crashed. The wrapper
+  copies only `__name__`/`__doc__`.
+
+### Background runs; failures still reach a human
+- **Decision:** `POST /tickets` saves the ticket (`new`) and returns 201; the graph
+  runs as a FastAPI `BackgroundTask` with its own session (the request's session is
+  closed by then). Status goes `new` → `in_progress` → `awaiting_review`.
+- **Failure path:** if any node fails, the ticket still moves to `awaiting_review` with
+  `needs_escalation = true` and the error as the reason, so it can't stall in
+  `in_progress` unseen. There's no draft, so approve returns 409 until someone reruns.
+- **Rerun:** `POST /tickets/{id}/rerun` sets `in_progress` before scheduling, so a second
+  rerun while one is running gets 409. Reruns append predictions, trace rows and a
+  draft; approval acts on the newest draft.
+
+### Draft Agent LLM: Gemini free tier by default, Claude optional
+- **Decision:** the Draft Agent calls its LLM through a small `Drafter` interface
+  (`app/agents/drafter.py`). `DRAFT_PROVIDER=auto` picks Gemini when `GEMINI_API_KEY`
+  is set, else Claude when `ANTHROPIC_API_KEY` is set, else an offline placeholder.
+  The prompt, grounding rules, logging and failure handling are the same for every
+  provider.
+- **Why Gemini:** the project owner has no budget for a paid key, and Gemini's API has
+  a free tier (a key from Google AI Studio, no card). The Claude drafter stays as a
+  switchable option.
+- **Gemini details:**
+  - **Call:** Google's `google-genai` SDK (2.22), `client.aio.models.generate_content`.
+  - **Model:** `gemini-3.8-flash`, the newest stable Flash model listed with a free
+    tier on Google's pricing page (Sept 2026).
+  - **Thinking:** level `low`, since a short grounded reply doesn't need deep
+    reasoning; `max_output_tokens=8192`.
+  - **Retries:** the free tier has low rate limits, so the client retries 429 and
+    transient 5xx up to 4 attempts with backoff (2-30 s). A run that still fails takes
+    the failure path, and the ticket can be rerun.
+  - **Unusable answers:** a blocked prompt, a non-`STOP` finish (safety, max tokens,
+    ...) or empty text raises `DraftError`.
+- **Free-tier data use:** Google's pricing page says free-tier content is "used to
+  improve our products" (paid tier: not used). That's fine for this project's synthetic
+  tickets. For real customer data, use a paid tier or another provider.
+- **Claude details (when selected):**
+  - **Call:** `anthropic.AsyncAnthropic`, `beta.messages.create`, `claude-opus-5`.
+  - **Settings:** adaptive thinking, effort `medium`, `max_tokens=16000`.
+  - **Refusals:** server-side refusal fallbacks (`fallbacks="default"`) re-run a declined
+    request on Anthropic's recommended fallback model.
+- **Why the SDKs directly, not LangChain chat models:** the node makes one call. The
+  SDKs give typed errors, finish reasons and token usage directly, and LangGraph needs
+  no LangChain model wrapper.
+- **Grounding:** the system prompt allows only the `<order>` and `<knowledge_base>`
+  sections as facts. The model must say it will follow up rather than guess, ignore
+  irrelevant entries, and treat the customer message as data (a prompt-injection
+  guard). The full prompt and raw response are logged (spec: "full prompt sent, raw LLM
+  output"), along with the provider (`mode`) and model.
+- **No key:** an `OfflineDrafter` writes a placeholder starting with `[OFFLINE DRAFT: …]`,
+  so the pipeline and review flow work without credentials and nobody mistakes it for a
+  real draft. Tests use stub clients and a fake drafter, never the network.
+
+### Deliberate deviations from 03-agent-architecture.md
+- **`TicketState.retrieved_docs`** holds `RetrievedDoc` objects, not strings: the draft
+  needs the content and the trace needs ids and similarity scores.
+- **`OrderLookupResult`** adds `item_name` and `order_date`, so drafts can say "your Air
+  Fryer ordered on the 3rd".
+- **Classifiers and search read subject + body**, not only the body: subjects like
+  "Refund status" carry signal.
+- **Escalation gains a sixth rule:** a strong urgency rule (safety, fraud, threat,
+  repeat contact, hardship, deadline) fires while the model didn't say `high`. This is
+  the safety net planned during urgency v4 ("fix 3").
+- **All fired rules are reported**, joined with "; ", not just the first, so the
+  reviewer sees every reason.
+
+### Review endpoints
+- **Queue order:** escalated first, then by urgency (high → low), then oldest.
+- **Approve/edit:** approve takes `{reviewer_id}` (a placeholder identity until there is
+  auth). Edit takes `{edited_text, reviewer_id}`. Both set `approved = true` and
+  `reviewed_at`, and resolve the ticket. Anything not awaiting review, or without a
+  pending draft, gets 409. There is no reject endpoint, since the spec lists none;
+  "reject" is an edit or a rerun.
+
+### Knowledge search: bge-small replaces MiniLM, delay entry reworded
+- **Problem:** the first live Gemini run was a desk lamp ticket: "ordered over a week
+  ago and it still has not arrived. The tracking has not updated in days." Search
+  returned "Tracking your order", "Wrong or missing items" and "Marked as delivered but
+  not received". The delay policy ranked 7th, so the draft could not quote its trace
+  and lost-parcel rules. The ticket never says "late" or "delayed".
+- **Hidden by the Phase 3 check:** a hit there means any entry tagged with the ticket's
+  category. Several entries are tagged `delivery_delay`, so this counted as a hit.
+  Measured for the delay policy itself, it reached the top 3 for only 8 of the 20
+  hand-written `delivery_delay` tickets.
+- **What was tried** (all 384-d, so no migration):
+  - Adding the linked order's status to the query ("Order status: delayed"): no change
+    in ranking. One short line barely moves the embedding of a whole ticket. The spec
+    also runs Knowledge before Order Lookup.
+  - Other models: `multi-qa-MiniLM-L6-cos-v1` and `paraphrase-MiniLM-L6-v2` were worse,
+    and `e5-small-v2` had lower hit@3. `all-MiniLM-L12-v2` and `bge-small-en-v1.5` were
+    better.
+  - Rewording the entry in customers' words ("still hasn't arrived", "past its expected
+    delivery date"). This helped every model.
+- **Decision:** `BAAI/bge-small-en-v1.5`, with its query instruction on queries only
+  (`EMBEDDING_QUERY_PREFIX`). The delay entry is now "Late or delayed orders that
+  haven't arrived" and opens with one sentence in customers' words. The policy is
+  unchanged.
+- **Result** on the 120 hand-written tickets: hit@1 0.82 → 0.88, hit@3 0.97 → 1.00,
+  MRR 0.89 → 0.94, and no misses. The delay entry is in the top 3 for 19 of 20
+  `delivery_delay` tickets (was 8). For the lamp ticket it ranks 1st, and a rerun's
+  draft now quotes the trace, the 2-day update and the 7-day lost-parcel rule.
+- **Alternatives' numbers** (reworded entry): MiniLM-L12 hit@1 0.84, delay entry 19/20.
+  bge without the query instruction: hit@1 0.84, delay entry 20/20.
+- **Costs:** a second sentence model (~130 MB) is loaded, because urgency v4 keeps its
+  MiniLM features. Changing the model means re-embedding: `seed_knowledge_base --reset`.
+- **Caveat:** the model and wording were picked on the same 120 tickets reported here,
+  so these numbers are optimistic. The lamp ticket is the only query outside that set.
+  `test_late_order_ticket_retrieves_the_delay_policy` guards it.
+
+### Known limitations
+- **Cold start:** the first ticket after startup waits several seconds while the
+  classifiers and both sentence models load. Later runs take milliseconds per node, plus
+  the LLM call.
+- **In-process background tasks:** a run in progress is lost if the server restarts
+  mid-run, leaving the ticket `in_progress` and rerun returning 409. That's acceptable
+  at this scale (the spec says no queue); a stale-run sweeper or a real queue would fix
+  it.

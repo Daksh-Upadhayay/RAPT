@@ -16,7 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
-from app.core.db import get_session
+from app.agents.drafter import DraftResult, get_drafter
+from app.core.db import get_session, get_session_factory
 from app.core.enums import OrderStatus
 from app.main import app
 from app.models import Base, Customer, Order
@@ -68,13 +69,36 @@ async def session(session_factory: async_sessionmaker[AsyncSession]) -> AsyncIte
         yield session
 
 
+class FakeDrafter:
+    """Stands in for Claude: records the prompts and returns a fixed draft (no network)."""
+
+    def __init__(self, text: str = "Hi, thanks for reaching out. Customer Support") -> None:
+        self.text = text
+        self.calls: list[tuple[str, str]] = []
+
+    async def draft(self, system: str, user: str) -> DraftResult:
+        self.calls.append((system, user))
+        return DraftResult(text=self.text, mode="fake", model="fake-model")
+
+
 @pytest.fixture
-async def client(session_factory: async_sessionmaker[AsyncSession]) -> AsyncIterator[AsyncClient]:
+def drafter() -> FakeDrafter:
+    return FakeDrafter()
+
+
+@pytest.fixture
+async def client(
+    session_factory: async_sessionmaker[AsyncSession], drafter: FakeDrafter
+) -> AsyncIterator[AsyncClient]:
     async def override_get_session() -> AsyncIterator[AsyncSession]:
         async with session_factory() as session:
             yield session
 
     app.dependency_overrides[get_session] = override_get_session
+    # Background agent runs: test database + fake drafter. ASGITransport waits for
+    # background tasks, so a run has finished by the time the request returns.
+    app.dependency_overrides[get_session_factory] = lambda: session_factory
+    app.dependency_overrides[get_drafter] = lambda: drafter
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
     app.dependency_overrides.clear()

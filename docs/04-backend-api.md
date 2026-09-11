@@ -54,11 +54,13 @@ the separation between persistence layer and API contract layer").
 - `GET /tickets/{id}/agent-trace` — returns all `agent_logs` rows for a
   ticket, in order — powers the frontend's agent trace view
 - `POST /tickets/{id}/rerun` — manually re-trigger the agent graph (useful
-  for demos and debugging)
+  for demos and debugging); 202, or 409 while a run is in progress. Reruns append
+  new predictions, trace rows and a new draft; the newest draft is the one reviewed
 
 ### Reviews
 - `GET /reviews/queue` — list tickets with `status = awaiting_review`
 - `POST /reviews/{ticket_id}/approve` — mark draft approved, ticket resolved
+  (body: `{"reviewer_id": str}`; 409 if the ticket isn't awaiting review or has no pending draft)
 - `POST /reviews/{ticket_id}/edit` — submit edited text, mark approved with
   edits, ticket resolved
 

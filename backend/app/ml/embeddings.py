@@ -1,8 +1,8 @@
 """Text embeddings for knowledge-base search (RAG).
 
 Not a classifier (see 02-ml-models.md): this turns text into vectors so pgvector can find
-knowledge-base entries close in meaning to a ticket. Uses the same MiniLM model as the
-urgency classifier's embedding features, so one copy is loaded per process.
+knowledge-base entries close in meaning to a ticket. The model (bge-small) is separate
+from the MiniLM model behind the urgency classifier's features; see DECISIONS.md.
 """
 
 from functools import cache
@@ -53,6 +53,7 @@ def embed_document(title: str, content: str) -> np.ndarray:
 
 
 def embed_query(text: str) -> np.ndarray:
-    """Embed a search query (ticket text). Long tickets are truncated, which is fine for
-    retrieval: the opening of a ticket usually states the problem."""
-    return embed_texts([text])[0]
+    """Embed a search query (ticket text), with the model's query instruction in front.
+    Long tickets are truncated, which is fine for retrieval: the opening of a ticket
+    usually states the problem."""
+    return embed_texts([settings.embedding_query_prefix + text])[0]

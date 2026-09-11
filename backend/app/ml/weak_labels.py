@@ -260,11 +260,23 @@ class WeakLabel:
     fired: tuple[str, ...]  # names of the LFs that fired, for auditing
 
 
-def weak_label(text: str) -> WeakLabel:
+def _effective_votes(text: str) -> tuple[tuple[str, ...], list[LabelingFunction]]:
+    """Names of every LF that fired, and the ones still voting after calm_language."""
     fired = [lf for lf in LABELING_FUNCTIONS if lf.fires(text)]
     names = tuple(lf.name for lf in fired)
     if "calm_language" in names:
         fired = [lf for lf in fired if lf.name not in _CANCELLED_BY_CALM]
+    return names, fired
+
+
+def strong_signals(text: str) -> list[str]:
+    """Strong HIGH rules that fire on the text (safety, fraud, threats, ...). The
+    Escalation Agent uses them as a deterministic safety net for model misses."""
+    return [lf.name for lf in _effective_votes(text)[1] if lf.vote is HIGH and lf.strong]
+
+
+def weak_label(text: str) -> WeakLabel:
+    names, fired = _effective_votes(text)
     strong_high = any(lf.vote is HIGH and lf.strong for lf in fired)
     weak_high = sum(lf.vote is HIGH and not lf.strong for lf in fired)
     medium = any(lf.vote is MEDIUM for lf in fired)

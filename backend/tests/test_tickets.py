@@ -107,11 +107,11 @@ async def test_created_ticket_can_be_fetched(client: AsyncClient, customer: Cust
 
     assert resp.status_code == 200
     data = resp.json()
-    assert {k: data[k] for k in created.json()} == created.json()
+    # The agent run (see test_agents.py) fills in triage/draft fields; the rest is as created
+    for field in ("id", "customer_id", "order_id", "subject", "body", "created_at"):
+        assert data[field] == created.json()[field]
     assert data["order"]["id"] == str(order.id)
     assert data["order"]["amount"] == "149.99"
-    assert data["draft_responses"] == []
-    assert data["agent_logs"] == []
 
 
 async def test_ticket_detail_includes_drafts_and_logs_in_order(

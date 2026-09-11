@@ -16,7 +16,7 @@ class TicketState(BaseModel):
     category_confidence: float | None = None
     urgency: str | None = None
     urgency_confidence: float | None = None
-    retrieved_docs: list[str] = []
+    retrieved_docs: list[RetrievedDoc] = []   # as built: full docs, not just text (see DECISIONS.md Phase 4)
     order_data: dict | None = None
     draft_text: str | None = None
     needs_escalation: bool | None = None
@@ -63,6 +63,9 @@ class TicketState(BaseModel):
   - escalate if `category_confidence < 0.6` OR `urgency_confidence < 0.6`
   - escalate if category is `refund_request` AND `order_data.amount > 100`
     (threshold configurable)
+  - as built, also: escalate if a strong urgency rule (safety, fraud, threat,
+    repeat contact, hardship, deadline) fires on the text while the model did not
+    say `high` — a deterministic safety net for urgency-model misses
   - otherwise: proceed to human review queue as normal (NOT auto-send — see
     note below)
 - **Output:** updates `needs_escalation`, `escalation_reason`
@@ -92,6 +95,7 @@ has strict typed contracts:
 - `UrgencyPrediction(label: str, confidence: float, model_version: str)`
 - `RetrievedDoc(id: str, title: str, content: str, similarity: float)`
 - `OrderLookupResult(order_id: str, status: str, tracking_number: str | None, amount: float, expected_delivery: str | None)`
+  — as built, also `item_name` and `order_date` so the draft can name the item (DECISIONS.md Phase 4)
 - `EscalationDecision(needs_escalation: bool, reason: str | None)`
 
 ## What to tell Claude Code for this phase

@@ -46,8 +46,8 @@ Mock e-commerce order data, seeded with Faker.
 
 ### `knowledge_base`
 Created in Phase 3 by its own migration (`a3f9c1d27e45`, which also runs
-`CREATE EXTENSION vector`). Embeddings come from `sentence-transformers/all-MiniLM-L6-v2`
-(384 dimensions); see DECISIONS.md, Phase 3.
+`CREATE EXTENSION vector`). Embeddings come from `BAAI/bge-small-en-v1.5`
+(384 dimensions; `all-MiniLM-L6-v2` until Phase 4); see DECISIONS.md, Phases 3 and 4.
 
 | Column | Type | Notes |
 |---|---|---|

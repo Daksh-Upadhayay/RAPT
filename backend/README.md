@@ -8,7 +8,7 @@ FastAPI + async SQLAlchemy backend. Dependencies are managed with [uv](https://d
 uv sync                          # create .venv and install locked dependencies
 brew install pgvector             # Postgres extension for the knowledge base
 createdb rapt && createdb rapt_test
-cp .env.example .env             # optional: defaults target localhost
+cp .env.example .env             # optional: defaults target localhost; add a free GEMINI_API_KEY for real drafts
 uv run alembic upgrade head      # apply migrations to the dev database
 ```
 

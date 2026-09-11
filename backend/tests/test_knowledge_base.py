@@ -44,7 +44,7 @@ async def test_list_entries_sorted_by_title(client: AsyncClient, kb_entries: Non
     "payload",
     [
         {"title": "", "content": "text"},
-        {"title": "Too long", "content": "refund policy details " * 200},  # beyond the model's 256 tokens
+        {"title": "Too long", "content": "refund policy details " * 200},  # beyond the model's 512 tokens
     ],
 )
 async def test_create_entry_rejects_bad_input(client: AsyncClient, payload: dict) -> None:
@@ -64,6 +64,20 @@ async def test_search_returns_closest_entries_first(session: AsyncSession, kb_en
 def test_embedding_size_matches_the_database_column() -> None:
     assert embed_texts(["hello"]).shape == (1, EMBEDDING_DIM)
     assert KnowledgeBaseEntry.__table__.c.embedding.type.dim == EMBEDDING_DIM
+
+
+async def test_late_order_ticket_retrieves_the_delay_policy(session: AsyncSession) -> None:
+    # Regression: this ticket never says "late" or "delayed", and the delay policy used
+    # to rank 7th, so the draft could not quote it (see DECISIONS.md, Phase 4).
+    await seed(session, load_entries())
+    ticket = (
+        "Where is my desk lamp?\nHi, I ordered a desk lamp over a week ago and it still has not arrived. "
+        "The tracking has not updated in days. Can you tell me when it will get here?"
+    )
+
+    docs = await kb_service.search(session, ticket, k=3)
+
+    assert "Late or delayed orders that haven't arrived" in [d.title for d in docs]
 
 
 async def test_seed_inserts_every_entry_and_refuses_to_rerun(session: AsyncSession) -> None:

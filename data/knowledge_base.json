@@ -38,11 +38,11 @@
     "content": "Standard shipping arrives 3-7 business days after dispatch. Express shipping arrives 1-2 business days after dispatch and must be ordered before 2pm. The expected delivery date on your order page is an estimate from the carrier, not a guarantee. Remote areas can take 2-3 extra days."
   },
   {
-    "title": "Delivery delay policy",
+    "title": "Late or delayed orders that haven't arrived",
     "categories": [
       "delivery_delay"
     ],
-    "content": "If your parcel is 2 or more business days past its expected delivery date, we open a trace with the carrier and update you within 2 business days. If it is still missing 7 business days after the expected date, we treat it as lost and offer a free replacement or a full refund, whichever you prefer. If an express order arrives late, we refund the express shipping fee."
+    "content": "If your order still hasn't arrived and is past its expected delivery date, it is delayed. If your parcel is 2 or more business days past its expected delivery date, we open a trace with the carrier and update you within 2 business days. If it is still missing 7 business days after the expected date, we treat it as lost and offer a free replacement or a full refund, whichever you prefer. If an express order arrives late, we refund the express shipping fee."
   },
   {
     "title": "Tracking not updating or stuck in transit",

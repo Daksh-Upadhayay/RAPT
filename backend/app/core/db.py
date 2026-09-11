@@ -16,3 +16,12 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
+
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """For work that outlives the request (background agent runs), which can't use the
+    request's session. A dependency so tests can point it at the test database."""
+    return SessionLocal
+
+
+SessionFactoryDep = Annotated[async_sessionmaker[AsyncSession], Depends(get_session_factory)]

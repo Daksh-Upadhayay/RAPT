@@ -4,17 +4,14 @@
 
 | category | tickets | hit@1 | hit@3 | MRR |
 |---|---|---|---|---|
-| cancellation | 20 | 1.00 | 1.00 | 1.00 |
+| cancellation | 20 | 0.95 | 1.00 | 0.97 |
 | damaged_item | 20 | 0.95 | 1.00 | 0.97 |
-| delivery_delay | 20 | 0.75 | 0.90 | 0.82 |
-| order_status | 20 | 0.75 | 1.00 | 0.88 |
-| product_question | 20 | 0.65 | 0.95 | 0.78 |
-| refund_request | 20 | 0.85 | 0.95 | 0.90 |
-| **all** | 120 | 0.82 | 0.97 | 0.89 |
+| delivery_delay | 20 | 0.90 | 1.00 | 0.95 |
+| order_status | 20 | 0.90 | 1.00 | 0.94 |
+| product_question | 20 | 0.75 | 1.00 | 0.86 |
+| refund_request | 20 | 0.85 | 1.00 | 0.92 |
+| **all** | 120 | 0.88 | 1.00 | 0.94 |
 
 ## Tickets with no relevant entry in the top 3
 
-- **delivery_delay**: My order is 10 days late. I've contacted you twice already and the replies just tell me to wait. I want this escalated.… → Order confirmation emails and missing confirmations, Cancelling an order, Support response times and urgent issues
-- **delivery_delay**: I've been waiting almost a month for order 30019. At this point I'm going to report this to my credit card company as go… → Order confirmation emails and missing confirmations, Unauthorised orders and suspicious charges, Wrong or missing items
-- **refund_request**: Your warehouse received my return on the 2nd according to tracking, but my refund still says pending. Can you check?… → What each order status means, Marked as delivered but not received, Tracking not updating or stuck in transit
-- **product_question**: The bluetooth speaker won't pair with my laptop, only my phone. Is it compatible with Windows? Nothing in the manual abo… → How long refunds take, Duplicate charges, partial refunds and payment errors, Support response times and urgent issues
+_None._
