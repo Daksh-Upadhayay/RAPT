@@ -15,6 +15,7 @@ from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import TicketCategory, TicketStatus
+from app.core.tenancy import tenant_of
 from app.models import DraftResponse, Ticket
 from app.schemas.metrics import (
     CategoryCount,
@@ -31,12 +32,14 @@ def _ratio(part: int, whole: int) -> float | None:
 
 async def summary(session: AsyncSession, days: int, today: date | None = None) -> MetricsSummary:
     today = today or datetime.now(UTC).date()
+    # Every figure is the session tenant's own (explicit filter; RLS also applies in the API)
+    mine = Ticket.tenant_id == tenant_of(session)
 
-    by_status = dict((await session.execute(select(Ticket.status, func.count()).group_by(Ticket.status))).all())
+    by_status = dict((await session.execute(select(Ticket.status, func.count()).where(mine).group_by(Ticket.status))).all())
     by_category = dict(
         (
             await session.execute(
-                select(Ticket.category, func.count()).where(Ticket.category.is_not(None)).group_by(Ticket.category)
+                select(Ticket.category, func.count()).where(mine, Ticket.category.is_not(None)).group_by(Ticket.category)
             )
         ).all()
     )
@@ -46,7 +49,7 @@ async def summary(session: AsyncSession, days: int, today: date | None = None) -
             select(
                 func.count(Ticket.needs_escalation),
                 func.count().filter(Ticket.needs_escalation.is_(True)),
-            )
+            ).where(mine)
         )
     ).one()
 
@@ -56,7 +59,7 @@ async def summary(session: AsyncSession, days: int, today: date | None = None) -
         d: (n, e)
         for d, n, e in await session.execute(
             select(day, func.count(Ticket.needs_escalation), func.count().filter(Ticket.needs_escalation.is_(True)))
-            .where(day >= start)
+            .where(mine, day >= start)
             .group_by(day)
         )
     }
@@ -72,7 +75,7 @@ async def summary(session: AsyncSession, days: int, today: date | None = None) -
     rows = await session.execute(
         select(edited, flagged, func.count())
         .join(Ticket, Ticket.id == DraftResponse.ticket_id)
-        .where(approved)
+        .where(mine, approved)
         .group_by(edited, flagged)
     )
     outcome_counts = {(was_edited, was_flagged): n for was_edited, was_flagged, n in rows}
@@ -93,7 +96,7 @@ async def summary(session: AsyncSession, days: int, today: date | None = None) -
         for category, n, avg in await session.execute(
             select(Ticket.category, func.count(), func.avg(seconds))
             .join(DraftResponse, DraftResponse.ticket_id == Ticket.id)
-            .where(approved, Ticket.category.is_not(None))
+            .where(mine, approved, Ticket.category.is_not(None))
             .group_by(Ticket.category)
         )
     }

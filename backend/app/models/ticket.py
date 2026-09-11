@@ -1,12 +1,20 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Text, func
+from sqlalchemy import Boolean, DateTime, Index, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import TicketCategory, TicketStatus, TicketUrgency
 from app.models.agent_log import AgentLog
-from app.models.base import Base, check_in, created_at_column, uuid_pk
+from app.models.base import (
+    Base,
+    check_in,
+    created_at_column,
+    same_tenant_fk,
+    tenant_id_column,
+    tenant_key,
+    uuid_pk,
+)
 from app.models.draft_response import DraftResponse
 from app.models.order import Order
 
@@ -19,17 +27,22 @@ class Ticket(Base):
         check_in("status", TicketStatus),
         check_in("corrected_category", TicketCategory),
         check_in("corrected_urgency", TicketUrgency),
+        tenant_key("tickets"),
+        same_tenant_fk("customer_id", "customers"),
+        same_tenant_fk("order_id", "orders"),
+        Index("ix_tickets_tenant_id_status", "tenant_id", "status"),
     )
 
     id: Mapped[uuid.UUID] = uuid_pk()
-    customer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("customers.id"), index=True)
-    order_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("orders.id"), index=True)
+    tenant_id: Mapped[uuid.UUID] = tenant_id_column()
+    customer_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    order_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
     subject: Mapped[str] = mapped_column(Text)
     body: Mapped[str] = mapped_column(Text)
     # category/urgency are null until the Triage Agent runs
     category: Mapped[str | None] = mapped_column(Text)
     urgency: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(Text, server_default=TicketStatus.NEW.value, index=True)
+    status: Mapped[str] = mapped_column(Text, server_default=TicketStatus.NEW.value)
     # null until the Escalation Agent runs; escalated tickets still go through review
     needs_escalation: Mapped[bool | None] = mapped_column(Boolean)
     escalation_reason: Mapped[str | None] = mapped_column(Text)
@@ -44,9 +57,11 @@ class Ticket(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    # lazy="raise": async sessions can't lazy-load, so every load must be explicit
-    order: Mapped[Order | None] = relationship(lazy="raise")
-    agent_logs: Mapped[list[AgentLog]] = relationship(lazy="raise", order_by=AgentLog.created_at)
+    # lazy="raise": async sessions can't lazy-load, so every load must be explicit.
+    # viewonly: loaded for reading; rows are always written directly, and the joins share
+    # tenant_id (same-tenant foreign keys), which writable relationships would fight over.
+    order: Mapped[Order | None] = relationship(lazy="raise", viewonly=True)
+    agent_logs: Mapped[list[AgentLog]] = relationship(lazy="raise", viewonly=True, order_by=AgentLog.created_at)
     draft_responses: Mapped[list[DraftResponse]] = relationship(
-        lazy="raise", order_by=DraftResponse.created_at
+        lazy="raise", viewonly=True, order_by=DraftResponse.created_at
     )

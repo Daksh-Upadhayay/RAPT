@@ -41,6 +41,18 @@ separate files/classes, even though they'll look similar. This is standard
 FastAPI practice and worth doing correctly for the resume story ("understands
 the separation between persistence layer and API contract layer").
 
+## Auth and tenancy (Phase 7)
+- `POST /auth/login` — `{email, password}`; sets the session cookie (httpOnly, Secure,
+  SameSite=Lax; a signed JWT with `sub`, `tenant_id`, `role`, 12 h). 401 with one message
+  for any bad credential; 429 after too many attempts (per email and per IP).
+- `POST /auth/logout` — clears the cookie. `GET /auth/me` — the user and tenant name.
+- Every other endpoint needs the session. The tenant comes only from the token: request
+  bodies forbid unknown fields, so a `tenant_id` in a body is a 422. Another tenant's
+  records read as 404.
+- Every request that isn't GET/HEAD/OPTIONS must send `X-RAPT-CSRF: 1` (403 otherwise).
+- The reviewer recorded on approvals and corrections is the signed-in user's email;
+  request bodies no longer carry `reviewer_id`.
+
 ## Core endpoints
 
 ### Tickets
@@ -60,11 +72,11 @@ the separation between persistence layer and API contract layer").
 ### Reviews
 - `GET /reviews/queue` — list tickets with `status = awaiting_review`
 - `POST /reviews/{ticket_id}/approve` — mark draft approved, ticket resolved
-  (body: `{"reviewer_id": str}`; 409 if the ticket isn't awaiting review or has no pending draft)
+  (no body; 409 if the ticket isn't awaiting review or has no pending draft)
 - `POST /reviews/{ticket_id}/edit` — submit edited text, mark approved with
   edits, ticket resolved
 - `PUT /reviews/{ticket_id}/triage` — set or clear the reviewer's correction of the
-  category/urgency (Phase 6; body: `{"corrected_category", "corrected_urgency", "reviewer_id"}`,
+  category/urgency (Phase 6; body: `{"corrected_category", "corrected_urgency"}`,
   a value equal to the model's label counts as no correction; 409 if not triaged yet).
   Allowed before or after approval. The review queue sorts by the corrected urgency.
 
@@ -106,8 +118,7 @@ class TicketResponse(BaseModel):
     created_at: datetime
 
 class ReviewEditRequest(BaseModel):
-    edited_text: str
-    reviewer_id: str
+    edited_text: str   # the reviewer is the signed-in user (Phase 7)
 ```
 
 ## Async considerations

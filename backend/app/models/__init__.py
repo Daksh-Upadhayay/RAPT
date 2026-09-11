@@ -6,6 +6,7 @@ from app.models.draft_response import DraftResponse
 from app.models.knowledge_base import KnowledgeBaseEntry
 from app.models.model_prediction import ModelPrediction
 from app.models.order import Order
+from app.models.tenant import Tenant, User
 from app.models.ticket import Ticket
 
-__all__ = ["AgentLog", "Base", "Customer", "DraftResponse", "KnowledgeBaseEntry", "ModelPrediction", "Order", "Ticket"]
+__all__ = ["AgentLog", "Base", "Customer", "DraftResponse", "KnowledgeBaseEntry", "ModelPrediction", "Order", "Tenant", "Ticket", "User"]

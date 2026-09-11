@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.enums import TicketCategory, TicketStatus, TicketUrgency
+from app.core.tenancy import get_scoped, tenant_of
 from app.models import Customer, Order, Ticket
 from app.schemas.ticket import TicketCreate
 
@@ -15,10 +16,11 @@ class InvalidTicketReference(Exception):
 
 
 async def create_ticket(session: AsyncSession, data: TicketCreate) -> Ticket:
-    if await session.get(Customer, data.customer_id) is None:
+    # Scoped lookups: another tenant's customer or order reads as not found
+    if await get_scoped(session, Customer, data.customer_id) is None:
         raise InvalidTicketReference(f"Customer {data.customer_id} not found")
     if data.order_id is not None:
-        order = await session.get(Order, data.order_id)
+        order = await get_scoped(session, Order, data.order_id)
         if order is None:
             raise InvalidTicketReference(f"Order {data.order_id} not found")
         if order.customer_id != data.customer_id:
@@ -37,7 +39,7 @@ async def list_tickets(
     category: TicketCategory | None = None,
     urgency: TicketUrgency | None = None,
 ) -> Sequence[Ticket]:
-    stmt = select(Ticket).order_by(Ticket.created_at.desc())
+    stmt = select(Ticket).where(Ticket.tenant_id == tenant_of(session)).order_by(Ticket.created_at.desc())
     if status is not None:
         stmt = stmt.where(Ticket.status == status)
     if category is not None:
@@ -50,7 +52,7 @@ async def list_tickets(
 async def get_ticket_detail(session: AsyncSession, ticket_id: UUID) -> Ticket | None:
     stmt = (
         select(Ticket)
-        .where(Ticket.id == ticket_id)
+        .where(Ticket.id == ticket_id, Ticket.tenant_id == tenant_of(session))
         .options(
             selectinload(Ticket.order),
             selectinload(Ticket.agent_logs),

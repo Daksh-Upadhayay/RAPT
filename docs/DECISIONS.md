@@ -772,3 +772,111 @@ from or fills gaps in the spec docs. Newest phase at the bottom.
 - **Checked:** every page at 1280 px and 390 px in headless Chrome, with real tickets
   (created for the check and deleted afterwards), including the failed-draft state from
   a real Gemini 504. No console errors, no horizontal scroll.
+
+---
+
+## Phase 7 — Tenancy and auth foundation
+
+Roadmap context: RAPT becomes a multi-tenant product for small businesses, pilot first.
+Phases 7-10 (tenancy and auth, a paid and resilient LLM, knowledge onboarding,
+deployment) come before a pilot with 2-3 design partners (Phase 11); per-tenant config,
+a helpdesk connector, an audit log and per-tenant metrics (Phases 12-15) follow what
+the partners ask for.
+
+### Invite-only accounts, one tenant per user
+- **Decision:** `tenants` and `users` tables. Users sign in with email and password
+  (argon2id); each belongs to exactly one tenant, as `admin` or `reviewer`. There is no
+  public signup: the operator creates tenants and users with `scripts/tenants.py`, which
+  prints a one-time password.
+- **Why:** a pilot needs a handful of accounts and no third-party auth vendor. One
+  tenant per user keeps isolation simple; an operator who needs to look inside a tenant
+  does it through the CLI, not a cross-tenant login.
+- **Email is unique across tenants** because the login form has no tenant field.
+
+### Session: a signed JWT in an httpOnly cookie
+- **Decision:** `POST /auth/login` sets an HS256 JWT (`sub`, `tenant_id`, `role`, 12 h) in
+  an httpOnly, Secure, SameSite=Lax cookie. Each request re-reads the user: a
+  deactivated user, or a token issued before `password_changed_at` (set by
+  `reset-password`), is rejected.
+- **CSRF:** a cookie is sent automatically, so every non-GET request must carry
+  `X-RAPT-CSRF: 1`. Another site can't add a custom header to a cross-site request
+  without a CORS preflight, and the API allows no cross-origin requests.
+- **Brute force:** login attempts are limited per email and per client IP (in memory;
+  enough for one API instance, a shared store for several).
+- **Timing:** an unknown email still verifies a dummy hash, so it takes as long as a wrong
+  password, and both get the same 401 message.
+- **JWT_SECRET** must be set outside development; without it each process uses a random
+  secret, which signs everyone out on restart.
+
+### The tenant comes only from the token
+- **Decision:** `app.core.deps` resolves the user from the cookie and opens the request's
+  database session scoped to their tenant (`SessionDep`), so every route that touches the
+  database is authenticated and tenant-scoped by construction. Request schemas forbid
+  unknown fields: a `tenant_id` in a body is a 422, never used. `reviewer_id` left the
+  request bodies; approvals and corrections record the signed-in user's email.
+
+### Isolation in two layers
+1. **Application:** services filter by `tenant_of(session)` and look rows up with
+   `get_scoped`, so another tenant's record reads as 404. New rows get `tenant_id` from
+   the column default (below), never from input.
+2. **Database:** row-level security on every tenant table:
+   `tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid`, for both reads
+   and writes. The API connects as `rapt_app`, a role without superuser or BYPASSRLS, so
+   the policy always applies. With no tenant in scope a query matches nothing and an
+   insert fails.
+- **Setting the tenant per transaction:** a SQLAlchemy `after_begin` listener runs
+  `set_config('app.tenant_id', ..., true)` for sessions that carry a tenant. It has to be
+  per transaction: the agent pipeline commits after every node, and a transaction-local
+  setting resets on commit.
+- **Default from the session:** `tenant_id` defaults to that same setting, so an insert
+  lands in the caller's tenant without the code passing it.
+- **Same-tenant foreign keys:** references are composite,
+  `(tenant_id, customer_id) -> customers(tenant_id, id)` and so on, so even the owner
+  connection can't link a ticket to another tenant's customer or order.
+- **Login is the one cross-tenant lookup:** `auth_find_user(email)`, a SECURITY DEFINER
+  function returning only what login needs; `rapt_app` can execute it but can't read
+  `users` outside its tenant.
+- **Least privilege:** `rapt_app` gets DML on business tables, SELECT on `tenants`, and
+  SELECT plus UPDATE of `last_login_at` only on `users`. Tenants and users are created
+  through the CLI.
+
+### Deviation from the approved design: RLS is not FORCEd
+- **Design said:** `FORCE ROW LEVEL SECURITY` so the table owner is bound too.
+- **Built:** RLS is enabled but not forced. The owner connection is the deliberate admin
+  path (migrations, operator CLI, seed and ML scripts), and on a managed Postgres where
+  the owner isn't a superuser, FORCE would lock those tools out. Those tools always work
+  inside an explicit `--tenant`, and the services' own filters apply to them.
+
+### Existing data: a `dev` tenant that is never deployed
+- The migration creates tenant `dev` and moves every existing row into it (the seeded
+  customers and orders, the knowledge base, dev tickets). Seed and evaluation scripts
+  now take `--tenant`, and `--reset` deletes only that tenant's rows (it used to
+  TRUNCATE whole tables). A deployed database starts empty; pilot tenants hold only real
+  data.
+
+### Vector search stays inside the tenant
+- `search()` filters by tenant and sets `hnsw.iterative_scan = strict_order` (pgvector
+  0.8), so the HNSW index keeps scanning past other tenants' nearest neighbours until it
+  has k rows of this tenant.
+
+### Training data per tenant
+- `export_feedback` requires `--tenant`: a business's corrections are its data. Pooling
+  several tenants' corrections into the shared models needs each tenant's agreement,
+  which belongs in the pilot agreement.
+
+### Found on the way: XGBoost + torch crash on macOS
+- Loading the embedding model (torch) before unpickling the XGBoost category model
+  segfaulted the process: two OpenMP runtimes. It would have hit any server that
+  embedded a knowledge-base entry before triaging its first ticket. `app/ml/__init__.py`
+  now imports xgboost first.
+
+### Tests
+- The suite runs as `rapt_app` against the test database, so RLS is exercised on every
+  test; clients sign in with a real session cookie. New: `test_auth.py` (cookie flags,
+  wrong password and unknown email look the same, deactivation, rate limit, logout,
+  tampered, expired and foreign-tenant tokens, password reset, CSRF) and `test_tenancy.py`
+  (another tenant's records are 404 for reads and changes, lists and metrics are scoped,
+  cross-tenant references are rejected, a body `tenant_id` is a 422, vector search stays
+  in the tenant, raw SQL sees only the tenant, no tenant sees nothing, RLS blocks writing
+  into another tenant, composite foreign keys hold for the owner, background runs write
+  into the ticket's tenant, the operator CLI).

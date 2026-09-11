@@ -42,7 +42,7 @@ async def test_approve_resolves_ticket_and_approves_latest_draft(
     await add_draft(session, ticket, "Older draft")
     await add_draft(session, ticket, "Latest draft")
 
-    resp = await client.post(f"/reviews/{ticket.id}/approve", json={"reviewer_id": "agent-7"})
+    resp = await client.post(f"/reviews/{ticket.id}/approve")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -50,7 +50,7 @@ async def test_approve_resolves_ticket_and_approves_latest_draft(
     older, latest = data["draft_responses"]
     assert older["approved"] is None
     assert latest["approved"] is True
-    assert latest["reviewer_id"] == "agent-7"
+    assert latest["reviewer_id"] == "ada@acme.example"  # the signed-in user
     assert latest["edited_text"] is None
     assert latest["reviewed_at"] is not None
 
@@ -60,7 +60,7 @@ async def test_edit_stores_the_reviewers_text(client: AsyncClient, session: Asyn
     await add_draft(session, ticket)
 
     resp = await client.post(
-        f"/reviews/{ticket.id}/edit", json={"edited_text": "Better reply", "reviewer_id": "agent-7"}
+        f"/reviews/{ticket.id}/edit", json={"edited_text": "Better reply"}
     )
 
     assert resp.status_code == 200
@@ -84,15 +84,15 @@ async def test_cannot_review_ticket_that_is_not_reviewable(
     if with_draft:
         await add_draft(session, ticket)
 
-    resp = await client.post(f"/reviews/{ticket.id}/approve", json={"reviewer_id": "agent-7"})
+    resp = await client.post(f"/reviews/{ticket.id}/approve")
 
     assert resp.status_code == 409
 
 
 async def test_review_validation_and_unknown_ticket(client: AsyncClient) -> None:
     unknown = "00000000-0000-0000-0000-000000000000"
-    assert (await client.post(f"/reviews/{unknown}/approve", json={"reviewer_id": "a"})).status_code == 404
-    resp = await client.post(f"/reviews/{unknown}/edit", json={"edited_text": "", "reviewer_id": "a"})
+    assert (await client.post(f"/reviews/{unknown}/approve")).status_code == 404
+    resp = await client.post(f"/reviews/{unknown}/edit", json={"edited_text": ""})
     assert resp.status_code == 422
 
 
@@ -102,7 +102,7 @@ TRIAGED = {"status": "awaiting_review", "category": "order_status", "urgency": "
 
 
 async def correct(client: AsyncClient, ticket_id, **body) -> httpx.Response:
-    return await client.put(f"/reviews/{ticket_id}/triage", json={"reviewer_id": "agent-7", **body})
+    return await client.put(f"/reviews/{ticket_id}/triage", json=body)
 
 
 async def test_correction_is_stored_next_to_the_model_labels(
@@ -116,7 +116,7 @@ async def test_correction_is_stored_next_to_the_model_labels(
     data = resp.json()
     assert (data["category"], data["urgency"]) == ("order_status", "low")  # model's labels kept
     assert (data["corrected_category"], data["corrected_urgency"]) == ("delivery_delay", "medium")
-    assert data["corrected_by"] == "agent-7"
+    assert data["corrected_by"] == "ada@acme.example"
     assert data["corrected_at"] is not None
 
 
@@ -154,8 +154,8 @@ async def test_correction_errors(client: AsyncClient, session: AsyncSession, cus
     assert (await correct(client, "00000000-0000-0000-0000-000000000000")).status_code == 404
     triaged = await add_ticket(session, customer, **TRIAGED)
     assert (await correct(client, triaged.id, corrected_category="not_a_category")).status_code == 422
-    resp = await client.put(f"/reviews/{triaged.id}/triage", json={"corrected_urgency": "high"})
-    assert resp.status_code == 422  # reviewer_id is required
+    resp = await client.put(f"/reviews/{triaged.id}/triage", json={"corrected_urgency": "high", "reviewer_id": "someone"})
+    assert resp.status_code == 422  # the reviewer is the signed-in user, never a body field
 
 
 async def test_queue_orders_by_corrected_urgency(client: AsyncClient, session: AsyncSession, customer: Customer) -> None:

@@ -17,16 +17,19 @@ from app.agents.graph import agent_graph
 from app.agents.nodes import AgentContext
 from app.agents.state import TicketState
 from app.core.enums import TicketStatus
+from app.core.tenancy import get_scoped, tenant_session
 from app.models import Ticket
 
 logger = logging.getLogger(__name__)
 
 
 async def run_agent_graph(
-    ticket_id: uuid.UUID, session_factory: async_sessionmaker[AsyncSession], drafter: Drafter
+    ticket_id: uuid.UUID, tenant_id: uuid.UUID, session_factory: async_sessionmaker[AsyncSession], drafter: Drafter
 ) -> None:
-    async with session_factory() as session:
-        ticket = await session.get(Ticket, ticket_id)
+    # The run happens after the request, so it opens its own session, scoped to the
+    # ticket's tenant: every node's reads and writes stay inside it
+    async with tenant_session(session_factory, tenant_id) as session:
+        ticket = await get_scoped(session, Ticket, ticket_id)
         if ticket is None:
             logger.warning("Agent run skipped: ticket %s not found", ticket_id)
             return

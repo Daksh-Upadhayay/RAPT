@@ -12,16 +12,17 @@ single best entry. The same author wrote the tickets and the knowledge base, so 
 as a sanity check. Reads the knowledge base from the database: run seed_knowledge_base first.
 
 Usage (from backend/):
-    uv run python -m scripts.evaluate_retrieval
+    uv run python -m scripts.evaluate_retrieval --tenant dev
 """
 
+import argparse
 import asyncio
 import json
 from collections import defaultdict
 
 import pandas as pd
 
-from app.core.db import SessionLocal, engine
+from app.core.admin_db import admin_tenant_session
 from app.ml.store import ARTIFACTS_DIR
 from app.services.knowledge_base import search
 from scripts.ml_training import HANDWRITTEN_PATH
@@ -32,22 +33,22 @@ REPORT_PATH = ARTIFACTS_DIR / "knowledge_base" / "retrieval_eval.md"
 
 
 async def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--tenant", default="dev", help="tenant whose knowledge base holds data/knowledge_base.json")
+    args = parser.parse_args()
     tickets = pd.read_csv(HANDWRITTEN_PATH)
     tags = {e["title"]: set(e["categories"]) for e in json.loads(KB_PATH.read_text())}
 
     per_category: dict[str, list[tuple[bool, bool, float]]] = defaultdict(list)
     misses = []
-    try:
-        async with SessionLocal() as session:
-            for text, category in zip(tickets["text"], tickets["category"], strict=True):
-                docs = await search(session, text, k=K)
-                ranks = [i for i, d in enumerate(docs, 1) if category in tags.get(d.title, set())]
-                first = ranks[0] if ranks else None
-                per_category[category].append((first == 1, first is not None, 1 / first if first else 0.0))
-                if first is None:
-                    misses.append((category, text, [d.title for d in docs]))
-    finally:
-        await engine.dispose()
+    async with admin_tenant_session(args.tenant) as session:
+        for text, category in zip(tickets["text"], tickets["category"], strict=True):
+            docs = await search(session, text, k=K)
+            ranks = [i for i, d in enumerate(docs, 1) if category in tags.get(d.title, set())]
+            first = ranks[0] if ranks else None
+            per_category[category].append((first == 1, first is not None, 1 / first if first else 0.0))
+            if first is None:
+                misses.append((category, text, [d.title for d in docs]))
 
     rows = []
     for category, results in [*sorted(per_category.items()), ("**all**", [r for rs in per_category.values() for r in rs])]:

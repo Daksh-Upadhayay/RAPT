@@ -2,9 +2,20 @@ import uuid
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import CheckConstraint, DateTime, MetaData, func, text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    MetaData,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from app.core.tenancy import CURRENT_TENANT_SQL
 
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
@@ -31,3 +42,25 @@ def check_in(column: str, allowed: type[StrEnum]) -> CheckConstraint:
     """CHECK constraint restricting a TEXT column to an enum's values."""
     values = ", ".join(f"'{member.value}'" for member in allowed)
     return CheckConstraint(f"{column} IN ({values})", name=f"{column}_valid")
+
+
+# --- Multi-tenancy (Phase 7) ------------------------------------------------------------
+
+
+def tenant_id_column() -> Mapped[uuid.UUID]:
+    """The owning tenant. Defaults to the transaction's tenant (app.core.tenancy), so an
+    insert lands in the caller's tenant and fails when no tenant is in scope."""
+    return mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id"), index=True, server_default=text(CURRENT_TENANT_SQL)
+    )
+
+
+def tenant_key(table: str) -> UniqueConstraint:
+    """(tenant_id, id): what same-tenant foreign keys reference."""
+    return UniqueConstraint("tenant_id", "id", name=f"uq_{table}_tenant_id_id")
+
+
+def same_tenant_fk(column: str, parent: str) -> ForeignKeyConstraint:
+    """A foreign key that also matches tenant_id, so the database rejects a reference to
+    another tenant's row (e.g. a ticket linked to another tenant's order)."""
+    return ForeignKeyConstraint(["tenant_id", column], [f"{parent}.tenant_id", f"{parent}.id"])

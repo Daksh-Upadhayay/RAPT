@@ -7,12 +7,40 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 ## Tables
 
+Every table except `tenants` has `tenant_id UUID NOT NULL -> tenants.id` (Phase 7). Its
+default is the current transaction's tenant (`app.tenant_id`), and row-level security
+limits the API's database role to that tenant's rows. References between tenant tables
+are composite, `(tenant_id, x_id) -> x(tenant_id, id)`, so no row can point at another
+tenant's row. Customer email is unique per tenant. See DECISIONS.md, Phase 7.
+
+### `tenants`
+| Column | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| name | TEXT | the business's name |
+| slug | TEXT | unique; used by the operator CLI and scripts (`--tenant acme`) |
+| created_at | TIMESTAMPTZ | default now() |
+
+### `users`
+| Column | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| tenant_id | UUID FK -> tenants.id | one tenant per user |
+| email | TEXT | unique across tenants (the login form has no tenant field); stored lowercase |
+| name | TEXT | |
+| password_hash | TEXT | argon2id |
+| role | TEXT | `admin`, `reviewer` |
+| is_active | BOOLEAN | default true |
+| password_changed_at | TIMESTAMPTZ | tokens issued before this are rejected |
+| last_login_at | TIMESTAMPTZ | nullable |
+| created_at | TIMESTAMPTZ | default now() |
+
 ### `customers`
 | Column | Type | Notes |
 |---|---|---|
 | id | UUID PK | |
 | name | TEXT | |
-| email | TEXT | unique |
+| email | TEXT | unique per tenant |
 | created_at | TIMESTAMPTZ | default now() |
 
 ### `orders`
@@ -82,7 +110,7 @@ Tracks every agent step for the "agent trace view" in the frontend.
 | draft_text | TEXT | AI-generated draft |
 | approved | BOOLEAN | nullable until reviewed |
 | edited_text | TEXT | nullable — filled if reviewer edits before sending |
-| reviewer_id | TEXT | nullable — who reviewed it (can be a placeholder for now, no auth system needed) |
+| reviewer_id | TEXT | nullable — the signed-in reviewer's email (Phase 7; a free-text placeholder before) |
 | reviewed_at | TIMESTAMPTZ | nullable |
 | created_at | TIMESTAMPTZ | default now() |
 

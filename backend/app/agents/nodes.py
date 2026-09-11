@@ -17,6 +17,7 @@ from app.agents.escalation import EscalationInput, escalation_rules, to_decision
 from app.agents.state import TicketState
 from app.core.config import EMBEDDING_DIM, settings
 from app.core.enums import AgentName, ModelName
+from app.core.tenancy import get_scoped
 from app.ml.category_model import predict_category
 from app.ml.urgency_model import predict_urgency
 from app.models import AgentLog, DraftResponse, ModelPrediction, Order, Ticket
@@ -92,7 +93,10 @@ def logged(agent: AgentName, reads: tuple[str, ...]) -> Callable[[NodeFn], Calla
 
 
 async def _ticket(session: AsyncSession, state: TicketState) -> Ticket:
-    return await session.get_one(Ticket, uuid.UUID(state.ticket_id))
+    ticket = await get_scoped(session, Ticket, uuid.UUID(state.ticket_id))
+    if ticket is None:
+        raise LookupError(f"Ticket {state.ticket_id} not found in this tenant")
+    return ticket
 
 
 @logged(AgentName.TRIAGE, reads=("subject", "body"))
@@ -149,7 +153,7 @@ async def knowledge(state: TicketState, ctx: AgentContext) -> NodeResult:
 @logged(AgentName.ORDER_LOOKUP, reads=("order_id",))
 async def order_lookup(state: TicketState, ctx: AgentContext) -> NodeResult:
     """Status, tracking and amount of the linked order (only runs when there is one)."""
-    order = await ctx.session.get(Order, uuid.UUID(state.order_id))
+    order = await get_scoped(ctx.session, Order, uuid.UUID(state.order_id))
     if order is None:
         result, output = None, {"result": "no order found"}
     else:

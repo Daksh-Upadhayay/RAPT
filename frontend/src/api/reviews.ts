@@ -1,5 +1,4 @@
 import type {
-  ReviewApproveRequest,
   ReviewEditRequest,
   TicketDetailResponse,
   TicketResponse,
@@ -13,8 +12,8 @@ export const reviewKeys = {
 
 export const getReviewQueue = () => request<TicketResponse[]>('/reviews/queue')
 
-export const approveDraft = (ticketId: string, data: ReviewApproveRequest) =>
-  request<TicketDetailResponse>(`/reviews/${ticketId}/approve`, { method: 'POST', body: data })
+export const approveDraft = (ticketId: string) =>
+  request<TicketDetailResponse>(`/reviews/${ticketId}/approve`, { method: 'POST' })
 
 export const editAndApproveDraft = (ticketId: string, data: ReviewEditRequest) =>
   request<TicketDetailResponse>(`/reviews/${ticketId}/edit`, { method: 'POST', body: data })

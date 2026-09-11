@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from app.core.db import SessionDep
+from app.core.deps import SessionDep
 from app.schemas.metrics import MetricsSummary
 from app.services import metrics as metrics_service
 

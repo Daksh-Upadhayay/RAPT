@@ -20,7 +20,8 @@ EXPECTED = {
     "TicketDetailResponse",
     "AgentLogResponse",
     "DraftResponseRead",
-    "ReviewApproveRequest",
+    "LoginRequest",
+    "MeResponse",
     "ReviewEditRequest",
     "TriageCorrectionRequest",
     "KnowledgeBaseResponse",
@@ -36,6 +37,7 @@ ENUM_CONSTANTS = {
     "TicketUrgency": "TICKET_URGENCIES",
     "TicketStatus": "TICKET_STATUSES",
     "AgentName": "AGENT_NAMES",
+    "UserRole": "USER_ROLES",
 }
 
 

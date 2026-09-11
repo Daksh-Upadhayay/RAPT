@@ -35,6 +35,25 @@ export type OrderStatus = 'processing' | 'shipped' | 'delivered' | 'delayed' | '
 export const AGENT_NAMES = ['triage', 'knowledge', 'order_lookup', 'draft', 'escalation'] as const
 export type AgentName = (typeof AGENT_NAMES)[number]
 
+export const USER_ROLES = ['admin', 'reviewer'] as const
+export type UserRole = (typeof USER_ROLES)[number]
+
+// --- Auth (app/schemas/auth.py) ---
+
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface MeResponse {
+  id: UUID
+  email: string
+  name: string
+  role: UserRole
+  tenant_id: UUID
+  tenant_name: string
+}
+
 // --- Customers (app/schemas/customer.py) ---
 
 export interface CustomerResponse {
@@ -112,20 +131,15 @@ export interface TicketDetailResponse extends TicketResponse {
 }
 
 // --- Reviews (app/schemas/review.py) ---
-
-export interface ReviewApproveRequest {
-  reviewer_id: string
-}
+// The reviewer is the signed-in user; approve takes no body.
 
 export interface ReviewEditRequest {
   edited_text: string
-  reviewer_id: string
 }
 
 export interface TriageCorrectionRequest {
   corrected_category?: TicketCategory | null
   corrected_urgency?: TicketUrgency | null
-  reviewer_id: string
 }
 
 // --- Knowledge base (app/schemas/knowledge_base.py) ---

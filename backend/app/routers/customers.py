@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.core.db import SessionDep
+from app.core.deps import SessionDep
 from app.schemas.customer import CustomerResponse
 from app.schemas.order import OrderResponse
 from app.services import customers as customer_service

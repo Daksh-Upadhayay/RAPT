@@ -19,9 +19,12 @@ real customer messages, so it is not committed to git.
 Safe to run on a schedule (e.g. nightly). It prints how many corrections each served
 model has not been trained on yet: the signal to retrain (see DECISIONS.md, Phase 6).
 
+One tenant per export (--tenant): a business's corrections are its data, and pooling
+them into a shared model needs that business's agreement (DECISIONS.md, Phase 7).
+
 Usage (from backend/):
-    uv run python -m scripts.export_feedback
-    uv run python -m scripts.export_feedback --output /tmp/corrections.csv
+    uv run python -m scripts.export_feedback --tenant acme
+    uv run python -m scripts.export_feedback --tenant acme --output /tmp/corrections.csv
 """
 
 import argparse
@@ -38,7 +41,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.state import ticket_text
 from app.core.config import settings
-from app.core.db import SessionLocal, engine
+from app.core.admin_db import UnknownTenant, admin_tenant_session
+from app.core.tenancy import tenant_of
 from app.core.enums import ModelName
 from app.ml.store import ARTIFACTS_DIR
 from app.models import ModelPrediction, Ticket
@@ -74,7 +78,10 @@ async def collect(session: AsyncSession, excluded: set[str] = frozenset()) -> tu
     tickets = (
         await session.scalars(
             select(Ticket)
-            .where(or_(Ticket.corrected_category.is_not(None), Ticket.corrected_urgency.is_not(None)))
+            .where(
+                Ticket.tenant_id == tenant_of(session),
+                or_(Ticket.corrected_category.is_not(None), Ticket.corrected_urgency.is_not(None)),
+            )
             .order_by(Ticket.corrected_at, Ticket.id)
         )
     ).all()
@@ -84,7 +91,7 @@ async def collect(session: AsyncSession, excluded: set[str] = frozenset()) -> tu
     if tickets:
         predictions = await session.scalars(
             select(ModelPrediction)
-            .where(ModelPrediction.ticket_id.in_([t.id for t in tickets]))
+            .where(ModelPrediction.tenant_id == tenant_of(session), ModelPrediction.ticket_id.in_([t.id for t in tickets]))
             .order_by(ModelPrediction.created_at)
         )
         versions = {(p.ticket_id, p.model_name): p.model_version for p in predictions}
@@ -112,7 +119,7 @@ async def collect(session: AsyncSession, excluded: set[str] = frozenset()) -> tu
     return pd.DataFrame(rows, columns=COLUMNS), skipped
 
 
-def write(df: pd.DataFrame, path: Path) -> None:
+def write(df: pd.DataFrame, path: Path, tenant: str | None = None) -> None:
     """Replace the file in one step, so a training run never reads a half-written export."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
@@ -120,6 +127,7 @@ def write(df: pd.DataFrame, path: Path) -> None:
     os.replace(tmp, path)
     manifest = {
         "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "tenant": tenant,
         "rows": len(df),
         "category_labels": int((df["category"] != "").sum()),
         "urgency_labels": int((df["urgency"] != "").sum()),
@@ -150,14 +158,15 @@ def served_model_status(path: Path) -> list[str]:
 async def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--output", type=Path, default=FEEDBACK_PATH)
+    parser.add_argument("--tenant", required=True, help="tenant slug whose corrections to export")
     args = parser.parse_args()
 
     try:
-        async with SessionLocal() as session:
+        async with admin_tenant_session(args.tenant) as session:
             df, skipped = await collect(session, eval_texts())
-    finally:
-        await engine.dispose()
-    write(df, args.output)
+    except UnknownTenant as exc:
+        raise SystemExit(f"Error: {exc}") from exc
+    write(df, args.output, args.tenant)
 
     print(
         f"Exported {len(df)} corrected tickets ({(df['category'] != '').sum()} category, "

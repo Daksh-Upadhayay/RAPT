@@ -8,6 +8,7 @@ from sqlalchemy import case, func, nulls_last, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import TicketStatus, TicketUrgency
+from app.core.tenancy import get_scoped, tenant_of
 from app.models import DraftResponse, Ticket
 from app.schemas.review import TriageCorrectionRequest
 
@@ -30,14 +31,14 @@ async def review_queue(session: AsyncSession) -> Sequence[Ticket]:
     )
     stmt = (
         select(Ticket)
-        .where(Ticket.status == TicketStatus.AWAITING_REVIEW)
+        .where(Ticket.tenant_id == tenant_of(session), Ticket.status == TicketStatus.AWAITING_REVIEW)
         .order_by(nulls_last(Ticket.needs_escalation.desc()), urgency_rank, Ticket.created_at)
     )
     return (await session.scalars(stmt)).all()
 
 
 async def _pending_draft(session: AsyncSession, ticket_id: UUID) -> tuple[Ticket, DraftResponse]:
-    ticket = await session.get(Ticket, ticket_id)
+    ticket = await get_scoped(session, Ticket, ticket_id)
     if ticket is None:
         raise TicketNotFound
     if ticket.status != TicketStatus.AWAITING_REVIEW:
@@ -45,7 +46,7 @@ async def _pending_draft(session: AsyncSession, ticket_id: UUID) -> tuple[Ticket
     # After a rerun the newest draft is the one under review
     draft = await session.scalar(
         select(DraftResponse)
-        .where(DraftResponse.ticket_id == ticket_id)
+        .where(DraftResponse.tenant_id == tenant_of(session), DraftResponse.ticket_id == ticket_id)
         .order_by(DraftResponse.created_at.desc())
         .limit(1)
     )
@@ -69,13 +70,13 @@ class NotTriaged(Exception):
     """The Triage Agent hasn't labelled the ticket yet, so there is nothing to correct."""
 
 
-async def correct_triage(session: AsyncSession, ticket_id: UUID, data: TriageCorrectionRequest) -> None:
+async def correct_triage(session: AsyncSession, ticket_id: UUID, data: TriageCorrectionRequest, reviewer_id: str) -> None:
     """Record the reviewer's category/urgency, replacing any earlier correction.
 
     A value equal to the model's label is stored as null: only disagreements are
     corrections, and only they become training rows (scripts/export_feedback.py).
     """
-    ticket = await session.get(Ticket, ticket_id)
+    ticket = await get_scoped(session, Ticket, ticket_id)
     if ticket is None:
         raise TicketNotFound
     if ticket.category is None or ticket.urgency is None:
@@ -84,6 +85,6 @@ async def correct_triage(session: AsyncSession, ticket_id: UUID, data: TriageCor
     urgency = data.corrected_urgency if data.corrected_urgency != ticket.urgency else None
     ticket.corrected_category, ticket.corrected_urgency = category, urgency
     corrected = category is not None or urgency is not None
-    ticket.corrected_by = data.reviewer_id if corrected else None
+    ticket.corrected_by = reviewer_id if corrected else None
     ticket.corrected_at = datetime.now(UTC) if corrected else None
     await session.commit()

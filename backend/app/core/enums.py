@@ -48,3 +48,8 @@ class AgentName(StrEnum):
 class ModelName(StrEnum):
     CATEGORY_CLASSIFIER = "category_classifier"
     URGENCY_CLASSIFIER = "urgency_classifier"
+
+
+class UserRole(StrEnum):
+    ADMIN = "admin"  # also manages the tenant (reviewers, knowledge base)
+    REVIEWER = "reviewer"

@@ -6,7 +6,7 @@ from sqlalchemy import Index, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config import EMBEDDING_DIM
-from app.models.base import Base, created_at_column, uuid_pk
+from app.models.base import Base, created_at_column, tenant_id_column, uuid_pk
 
 
 class KnowledgeBaseEntry(Base):
@@ -24,6 +24,8 @@ class KnowledgeBaseEntry(Base):
     )
 
     id: Mapped[uuid.UUID] = uuid_pk()
+    # Search always filters by tenant: retrieval never crosses tenants (Phase 7)
+    tenant_id: Mapped[uuid.UUID] = tenant_id_column()
     title: Mapped[str] = mapped_column(Text)
     content: Mapped[str] = mapped_column(Text)
     # Embedding of "title. content", unit length (see app/ml/embeddings.py). Accepts a

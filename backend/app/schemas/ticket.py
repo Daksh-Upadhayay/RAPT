@@ -9,6 +9,8 @@ from app.schemas.order import OrderResponse
 
 
 class TicketCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # a tenant_id here is rejected, never trusted
+
     customer_id: UUID
     subject: str = Field(min_length=1)
     body: str = Field(min_length=1)

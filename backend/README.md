@@ -8,9 +8,29 @@ FastAPI + async SQLAlchemy backend. Dependencies are managed with [uv](https://d
 uv sync                          # create .venv and install locked dependencies
 brew install pgvector             # Postgres extension for the knowledge base
 createdb rapt && createdb rapt_test
-cp .env.example .env             # optional: defaults target localhost; add a free GEMINI_API_KEY for real drafts
-uv run alembic upgrade head      # apply migrations to the dev database
+createuser rapt_app              # the API's restricted role (no superuser, no BYPASSRLS)
+cp .env.example .env             # optional: defaults target localhost; set JWT_SECRET, add a GEMINI_API_KEY
+uv run alembic upgrade head      # migrations (as the owner); grants rapt_app its table access
 ```
+
+The API runs as `rapt_app`, so Postgres row-level security keeps every query inside the
+signed-in user's tenant. Create `rapt_app` before migrating (the migration grants it
+access); if you created it later, rerun the grants in the Phase 7 migration.
+
+## Tenants and users
+
+Accounts are invite-only. The operator CLI creates them (owner connection):
+
+```bash
+uv run python -m scripts.tenants create-tenant --name "Acme Homewares" --slug acme
+uv run python -m scripts.tenants create-user --tenant acme --email ops@acme.com --name "Ada" --role admin
+uv run python -m scripts.tenants list
+uv run python -m scripts.tenants reset-password --email ops@acme.com      # signs them out everywhere
+uv run python -m scripts.tenants deactivate-user --email ops@acme.com
+```
+
+`create-user` and `reset-password` print a one-time password. Existing data lives in the
+`dev` tenant (created by the Phase 7 migration); fake seed data belongs there only.
 
 ## Run
 
@@ -25,15 +45,15 @@ The reviewer UI is in `../frontend` (`npm run dev`, http://localhost:5173); it p
 ## Seed data + ML models
 
 ```bash
-uv run python -m scripts.seed_orders                           # fake customers + orders (--reset to redo)
+uv run python -m scripts.seed_orders --tenant dev             # fake customers + orders (--reset to redo)
 uv run python -m scripts.build_dataset                         # data/processed/tickets.csv (downloads Bitext once)
 uv run python -m scripts.build_urgency_dataset                 # data/processed/urgency_tickets.csv
 uv run python -m scripts.train_category_model --version v2     # -> app/ml/artifacts/category_classifier/v2/
 uv run python -m scripts.train_urgency_model --version v3      # -> app/ml/artifacts/urgency_classifier/v3/
 uv run python -m scripts.evaluate_model --model urgency_classifier --versions v1 v2 --eval-set ../data/eval/urgency_holdout_test.csv
-uv run python -m scripts.seed_knowledge_base                  # embed data/knowledge_base.json into pgvector (--reset to redo)
-uv run python -m scripts.search_knowledge_base "my parcel is late"   # top-3 matching entries
-uv run python -m scripts.evaluate_retrieval                    # hit@1/hit@3 on the hand-written tickets
+uv run python -m scripts.seed_knowledge_base --tenant dev      # embed data/knowledge_base.json into pgvector (--reset to redo)
+uv run python -m scripts.search_knowledge_base --tenant dev "my parcel is late"   # top-3 matching entries
+uv run python -m scripts.evaluate_retrieval --tenant dev       # hit@1/hit@3 on the hand-written tickets
 ```
 
 Each training run writes `model.joblib`, `metrics.json` and `report.md` (evaluation). To serve
@@ -43,7 +63,7 @@ Inference: `app.ml.category_model.predict_category(text)` and `app.ml.urgency_mo
 ## Feedback loop (Phase 6)
 
 ```bash
-uv run python -m scripts.export_feedback    # reviewer corrections -> ../data/feedback/corrections.csv
+uv run python -m scripts.export_feedback --tenant acme   # a tenant's corrections -> ../data/feedback/corrections.csv
 uv run python -m scripts.train_category_model --version v2   # picks the corrections up
 ```
 

@@ -43,8 +43,8 @@ async def test_order_status_check_constraint(session: AsyncSession, customer: Cu
         await session.commit()
 
 
-async def test_customer_email_is_unique(session: AsyncSession, customer: Customer) -> None:
+async def test_customer_email_is_unique_within_a_tenant(session: AsyncSession, customer: Customer) -> None:
     session.add(Customer(name="Imposter", email=customer.email))
 
-    with pytest.raises(IntegrityError, match="uq_customers_email"):
+    with pytest.raises(IntegrityError, match="uq_customers_tenant_id_email"):
         await session.commit()

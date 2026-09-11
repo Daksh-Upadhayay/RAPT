@@ -6,8 +6,8 @@ truncated. The `categories` field in the JSON is not stored; scripts/evaluate_re
 uses it to check that search returns entries relevant to a ticket's category.
 
 Usage (from backend/):
-    uv run python -m scripts.seed_knowledge_base            # refuses if the table has rows
-    uv run python -m scripts.seed_knowledge_base --reset    # wipe and re-embed everything
+    uv run python -m scripts.seed_knowledge_base --tenant dev            # refuses if the tenant has entries
+    uv run python -m scripts.seed_knowledge_base --tenant dev --reset    # replace the tenant's entries
 """
 
 import argparse
@@ -19,7 +19,8 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.db import SessionLocal, engine
+from app.core.admin_db import UnknownTenant, admin_tenant_session
+from app.core.tenancy import tenant_of
 from app.ml.embeddings import document_text, embed_texts, token_count
 from app.ml.text_features import sentence_model
 from app.models import KnowledgeBaseEntry
@@ -41,10 +42,11 @@ def load_entries(path: Path = KB_PATH) -> list[dict]:
 
 
 async def seed(session: AsyncSession, entries: list[dict], reset: bool = False) -> int:
+    tenant_id = tenant_of(session)
     if reset:
-        await session.execute(text("TRUNCATE knowledge_base"))
-    elif await session.scalar(select(func.count()).select_from(KnowledgeBaseEntry)):
-        raise ExistingDataError("knowledge_base is not empty; rerun with --reset to wipe and re-embed")
+        await session.execute(text("DELETE FROM knowledge_base WHERE tenant_id = :t"), {"t": tenant_id})
+    elif await session.scalar(select(func.count()).select_from(KnowledgeBaseEntry).where(KnowledgeBaseEntry.tenant_id == tenant_id)):
+        raise ExistingDataError("this tenant already has entries; rerun with --reset to replace and re-embed them")
 
     vectors = embed_texts([document_text(e["title"], e["content"]) for e in entries])
     session.add_all(
@@ -57,17 +59,16 @@ async def seed(session: AsyncSession, entries: list[dict], reset: bool = False) 
 
 async def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--reset", action="store_true", help="truncate knowledge_base first")
+    parser.add_argument("--reset", action="store_true", help="delete this tenant's entries first")
+    parser.add_argument("--tenant", required=True, help="tenant slug (data/knowledge_base.json is the dev tenant's demo policies)")
     args = parser.parse_args()
 
     entries = load_entries()
     try:
-        async with SessionLocal() as session:
+        async with admin_tenant_session(args.tenant) as session:
             n = await seed(session, entries, reset=args.reset)
-    except ExistingDataError as exc:
+    except (ExistingDataError, UnknownTenant) as exc:
         raise SystemExit(f"Error: {exc}") from exc
-    finally:
-        await engine.dispose()
     print(f"Embedded and inserted {n} knowledge-base entries ({settings.embedding_model})")
 
 

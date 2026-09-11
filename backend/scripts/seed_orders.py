@@ -4,10 +4,12 @@ Order dates are generated relative to today, and each order's status is kept
 consistent with its dates and tracking number (e.g. a `delayed` order is past its
 expected delivery date; a `processing` order has no tracking number yet).
 
+Fake data: seed the dev tenant only, never a real business's tenant.
+
 Usage (from backend/):
-    uv run python -m scripts.seed_orders                     # 200 customers
-    uv run python -m scripts.seed_orders --customers 50 --seed 7
-    uv run python -m scripts.seed_orders --reset             # wipe customers/orders (and tickets) first
+    uv run python -m scripts.seed_orders --tenant dev                     # 200 customers
+    uv run python -m scripts.seed_orders --tenant dev --customers 50 --seed 7
+    uv run python -m scripts.seed_orders --tenant dev --reset             # replace this tenant's customers/orders (and tickets)
 """
 
 import argparse
@@ -23,7 +25,8 @@ from faker import Faker
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db import SessionLocal, engine
+from app.core.admin_db import UnknownTenant, admin_tenant_session
+from app.core.tenancy import tenant_of
 from app.core.enums import OrderStatus
 from app.models import Customer, Order
 
@@ -128,11 +131,13 @@ async def seed(
     fake.seed_instance(seed)
     rng = random.Random(seed)
 
+    tenant_id = tenant_of(session)
     if reset:
-        # CASCADE also clears tickets and everything hanging off them
-        await session.execute(text("TRUNCATE customers, orders CASCADE"))
-    elif await session.scalar(select(func.count()).select_from(Customer)):
-        raise ExistingDataError("customers table is not empty; rerun with --reset to wipe and reseed")
+        # This tenant's rows only, children first (tickets hang off customers and orders)
+        for table in ("agent_logs", "draft_responses", "model_predictions", "tickets", "orders", "customers"):
+            await session.execute(text(f"DELETE FROM {table} WHERE tenant_id = :t"), {"t": tenant_id})
+    elif await session.scalar(select(func.count()).select_from(Customer).where(Customer.tenant_id == tenant_id)):
+        raise ExistingDataError("this tenant already has customers; rerun with --reset to wipe and reseed")
 
     customers = [Customer(name=fake.name(), email=fake.unique.email()) for _ in range(n_customers)]
     session.add_all(customers)
@@ -150,16 +155,15 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--customers", type=int, default=200)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--reset", action="store_true", help="truncate customers/orders (and tickets) first")
+    parser.add_argument("--reset", action="store_true", help="delete this tenant's customers/orders (and tickets) first")
+    parser.add_argument("--tenant", required=True, help="tenant slug; fake data belongs in the dev tenant only")
     args = parser.parse_args()
 
     try:
-        async with SessionLocal() as session:
+        async with admin_tenant_session(args.tenant) as session:
             n_customers, orders = await seed(session, args.customers, args.seed, reset=args.reset)
-    except ExistingDataError as exc:
+    except (ExistingDataError, UnknownTenant) as exc:
         raise SystemExit(f"Error: {exc}") from exc
-    finally:
-        await engine.dispose()
 
     print(f"Seeded {n_customers} customers and {len(orders)} orders")
     for status, count in Counter(o.status for o in orders).most_common():

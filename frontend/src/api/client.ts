@@ -40,7 +40,12 @@ export async function request<T>(
   try {
     response = await fetch(`${BASE_URL}${path}${qs}`, {
       method: options.method ?? 'GET',
-      headers: options.body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      // The session is an httpOnly cookie (sent automatically, same origin). Requests that
+      // change something also carry the CSRF header the API requires.
+      headers: {
+        ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...((options.method ?? 'GET') === 'GET' ? {} : { 'X-RAPT-CSRF': '1' }),
+      },
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
     })
   } catch {

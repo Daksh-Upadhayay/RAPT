@@ -1,4 +1,3 @@
-from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import Depends
@@ -6,21 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings
 
+# The API's engine: connects as the restricted role, so row-level security applies.
+# Request sessions come from app.core.deps.get_session (tenant-scoped, authenticated).
 engine = create_async_engine(settings.database_url)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
-async def get_session() -> AsyncIterator[AsyncSession]:
-    async with SessionLocal() as session:
-        yield session
-
-
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
-
-
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
-    """For work that outlives the request (background agent runs), which can't use the
-    request's session. A dependency so tests can point it at the test database."""
+    """Opens the API's sessions: request sessions (via app.core.deps) and background agent
+    runs, which outlive the request. A dependency so tests can point it at the test
+    database."""
     return SessionLocal
 
 

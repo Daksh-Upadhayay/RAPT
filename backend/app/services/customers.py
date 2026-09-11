@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tenancy import get_scoped, tenant_of
 from app.models import Customer, Order
 
 
@@ -17,7 +18,7 @@ def _escape_like(text: str) -> str:
 
 async def search_customers(session: AsyncSession, search: str | None, limit: int) -> Sequence[Customer]:
     """Customers whose name or email contains `search` (case-insensitive), by name."""
-    stmt = select(Customer).order_by(Customer.name, Customer.email).limit(limit)
+    stmt = select(Customer).where(Customer.tenant_id == tenant_of(session)).order_by(Customer.name, Customer.email).limit(limit)
     if search:
         pattern = f"%{_escape_like(search)}%"
         stmt = stmt.where(or_(Customer.name.ilike(pattern), Customer.email.ilike(pattern)))
@@ -25,12 +26,16 @@ async def search_customers(session: AsyncSession, search: str | None, limit: int
 
 
 async def get_customer(session: AsyncSession, customer_id: UUID) -> Customer | None:
-    return await session.get(Customer, customer_id)
+    return await get_scoped(session, Customer, customer_id)
 
 
 async def customer_orders(session: AsyncSession, customer_id: UUID) -> Sequence[Order]:
     """The customer's orders, newest first."""
-    if await session.get(Customer, customer_id) is None:
+    if await get_scoped(session, Customer, customer_id) is None:
         raise CustomerNotFound
-    stmt = select(Order).where(Order.customer_id == customer_id).order_by(Order.order_date.desc())
+    stmt = (
+        select(Order)
+        .where(Order.tenant_id == tenant_of(session), Order.customer_id == customer_id)
+        .order_by(Order.order_date.desc())
+    )
     return (await session.scalars(stmt)).all()

@@ -7,8 +7,23 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = "postgresql+asyncpg://localhost:5432/rapt"
-    test_database_url: str = "postgresql+asyncpg://localhost:5432/rapt_test"
+    # The API connects as a restricted role (no superuser, no BYPASSRLS), so Postgres
+    # row-level security applies to every query it makes. Migrations, the operator CLI and
+    # the seed/ML scripts use the owner connection (admin_*), which bypasses RLS; they
+    # filter by tenant themselves. See DECISIONS.md, Phase 7.
+    database_url: str = "postgresql+asyncpg://rapt_app@localhost:5432/rapt"
+    admin_database_url: str = "postgresql+asyncpg://localhost:5432/rapt"
+    test_database_url: str = "postgresql+asyncpg://rapt_app@localhost:5432/rapt_test"
+    test_admin_database_url: str = "postgresql+asyncpg://localhost:5432/rapt_test"
+    # The restricted role the migrations grant table access to
+    app_db_role: str = "rapt_app"
+
+    # Auth: invite-only accounts, a signed JWT in an httpOnly cookie
+    jwt_secret: SecretStr | None = None  # required outside tests; see app/core/security.py
+    jwt_ttl_hours: int = 12
+    cookie_secure: bool = True  # browsers accept Secure cookies on http://localhost
+    login_attempts_per_window: int = 10
+    login_window_minutes: int = 15
 
     # Which trained artifact under app/ml/artifacts/<model>/ to serve
     category_model_version: str = "v1"

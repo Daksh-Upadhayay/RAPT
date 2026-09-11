@@ -5,7 +5,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from app.agents.drafter import Drafter, get_drafter
 from app.agents.runner import run_agent_graph
-from app.core.db import SessionDep, SessionFactoryDep
+from app.core.db import SessionFactoryDep
+from app.core.deps import CurrentUserDep, SessionDep
 from app.schemas.ticket import AgentLogResponse, TicketResponse
 from app.services import agents as agent_service
 
@@ -25,6 +26,7 @@ async def get_agent_trace(ticket_id: UUID, session: SessionDep) -> list[AgentLog
 @router.post("/{ticket_id}/rerun", status_code=status.HTTP_202_ACCEPTED)
 async def rerun(
     ticket_id: UUID,
+    user: CurrentUserDep,
     session: SessionDep,
     background: BackgroundTasks,
     session_factory: SessionFactoryDep,
@@ -37,5 +39,5 @@ async def rerun(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found") from exc
     except agent_service.RunInProgress as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, "An agent run for this ticket is already in progress") from exc
-    background.add_task(run_agent_graph, ticket.id, session_factory, drafter)
+    background.add_task(run_agent_graph, ticket.id, user.tenant_id, session_factory, drafter)
     return TicketResponse.model_validate(ticket)

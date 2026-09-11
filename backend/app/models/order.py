@@ -2,19 +2,31 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Numeric, Text
+from sqlalchemy import Date, Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.enums import OrderStatus
-from app.models.base import Base, check_in, uuid_pk
+from app.models.base import (
+    Base,
+    check_in,
+    same_tenant_fk,
+    tenant_id_column,
+    tenant_key,
+    uuid_pk,
+)
 
 
 class Order(Base):
     __tablename__ = "orders"
-    __table_args__ = (check_in("status", OrderStatus),)
+    __table_args__ = (
+        check_in("status", OrderStatus),
+        tenant_key("orders"),
+        same_tenant_fk("customer_id", "customers"),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
-    customer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("customers.id"), index=True)
+    tenant_id: Mapped[uuid.UUID] = tenant_id_column()
+    customer_id: Mapped[uuid.UUID] = mapped_column(index=True)
     item_name: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text)
     tracking_number: Mapped[str | None] = mapped_column(Text)
