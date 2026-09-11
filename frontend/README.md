@@ -44,7 +44,7 @@ src/
     trace/         run grouping + log parsing (model.ts), TraceTimeline
     intake/        SubmitTicketForm, CustomerPicker
     metrics/       MetricsOverview, charts, ChartCard, chart theme
-    reviewer/      "Reviewing as" identity (provider, hook, field)
+    auth/          useSession, useLogin, useLogout, LoginForm, RequireSession (route guard), UserMenu
   pages/           thin: compose features into a screen, handle the URL
   app/             AppShell (header + nav), queryClient
   api/             fetch wrapper (client.ts) + one module per backend resource
@@ -65,6 +65,15 @@ primary action and anything needing attention, stop red (`danger`) for escalatio
 One typeface, Archivo, whose width axis gives the signature treatment: ticket subjects
 and page titles in heavy expanded type (`type-label`). The agent trace reads like a
 carrier's tracking history.
+
+## Signing in
+
+Every page except `/login` sits behind `RequireSession`. The session is an httpOnly
+cookie set by `POST /auth/login`, so the app never sees the token; `useSession` reads
+`GET /auth/me`. Any 401 (expired, signed out elsewhere, password reset) marks the user
+signed out and sends them back to `/login?next=…`. Requests that change something carry
+the `X-RAPT-CSRF` header (api/client.ts). Accounts come from the operator CLI
+(`backend/scripts/tenants.py`).
 
 ## Keeping the types in sync
 

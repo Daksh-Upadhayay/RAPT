@@ -4,16 +4,13 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import App from './App.tsx'
 import { queryClient } from './app/queryClient'
-import { ReviewerProvider } from './features/reviewer'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ReviewerProvider>
-          <App />
-        </ReviewerProvider>
+        <App />
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

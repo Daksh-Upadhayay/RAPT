@@ -1,8 +1,10 @@
 import { lazy, Suspense } from 'react'
 import { Link, Navigate, Route, Routes } from 'react-router'
 import { AppShell } from './app/AppShell'
+import { RequireSession } from './features/auth'
 import { EmptyState, Loading } from './ui'
 import { AgentTrace } from './pages/AgentTrace'
+import { Login } from './pages/Login'
 import { ReviewQueue } from './pages/ReviewQueue'
 import { SubmitTicket } from './pages/SubmitTicket'
 import { TicketDetail } from './pages/TicketDetail'
@@ -23,21 +25,25 @@ function NotFound() {
 export default function App() {
   return (
     <Routes>
-      <Route element={<AppShell />}>
-        <Route index element={<Navigate to="/reviews" replace />} />
-        <Route path="reviews" element={<ReviewQueue />} />
-        <Route path="submit" element={<SubmitTicket />} />
-        <Route path="tickets/:id" element={<TicketDetail />} />
-        <Route path="tickets/:id/trace" element={<AgentTrace />} />
-        <Route
-          path="dashboard"
-          element={
-            <Suspense fallback={<Loading label="Loading dashboard…" />}>
-              <Dashboard />
-            </Suspense>
-          }
-        />
-        <Route path="*" element={<NotFound />} />
+      <Route path="login" element={<Login />} />
+      {/* Everything else needs a session */}
+      <Route element={<RequireSession />}>
+        <Route element={<AppShell />}>
+          <Route index element={<Navigate to="/reviews" replace />} />
+          <Route path="reviews" element={<ReviewQueue />} />
+          <Route path="submit" element={<SubmitTicket />} />
+          <Route path="tickets/:id" element={<TicketDetail />} />
+          <Route path="tickets/:id/trace" element={<AgentTrace />} />
+          <Route
+            path="dashboard"
+            element={
+              <Suspense fallback={<Loading label="Loading dashboard…" />}>
+                <Dashboard />
+              </Suspense>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Route>
       </Route>
     </Routes>
   )

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { DraftResponseRead } from '../../types'
 import { Button, CheckIcon, ErrorNotice } from '../../ui'
-import { useReviewer } from '../reviewer'
+import { useSession } from '../auth'
 import { useApproveDraft } from './hooks'
 
 /**
@@ -9,7 +9,7 @@ import { useApproveDraft } from './hooks'
  * changes, only "Approve my edits" is offered, so an edit can't be lost by accident.
  */
 export function DraftEditor({ ticketId, draft }: { ticketId: string; draft: DraftResponseRead }) {
-  const { reviewerId } = useReviewer()
+  const { data: me } = useSession()
   const [text, setText] = useState(draft.draft_text)
   const approve = useApproveDraft(ticketId)
   const edited = text.trim() !== draft.draft_text.trim()
@@ -54,7 +54,7 @@ export function DraftEditor({ ticketId, draft }: { ticketId: string; draft: Draf
             Approve draft
           </Button>
         )}
-        <span className="text-tiny text-ink-3">Approving as {reviewerId.trim() || 'reviewer'}. This resolves the ticket.</span>
+        <span className="text-tiny text-ink-3">Approving as {me?.name}. This resolves the ticket.</span>
       </div>
     </div>
   )

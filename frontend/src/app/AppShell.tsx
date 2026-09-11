@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { useReviewQueue } from '../features/review'
-import { ReviewerField } from '../features/reviewer'
+import { UserMenu } from '../features/auth'
 
 function QueueCount() {
   // Shares the review queue's cache, so the count stays fresh on every page
@@ -30,7 +30,7 @@ function NavItem({ to, children }: { to: string; children: ReactNode }) {
   )
 }
 
-/** The frame around every page: wordmark, the three places, and who is reviewing. */
+/** The frame around every page: wordmark, the three places, and who is signed in. */
 export function AppShell() {
   return (
     <div className="min-h-screen">
@@ -51,7 +51,7 @@ export function AppShell() {
             <NavItem to="/dashboard">Dashboard</NavItem>
           </nav>
           <div className="ml-auto flex h-14 items-center sm:ml-0">
-            <ReviewerField />
+            <UserMenu />
           </div>
         </div>
       </header>

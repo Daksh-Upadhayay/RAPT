@@ -880,3 +880,11 @@ the partners ask for.
   in the tenant, raw SQL sees only the tenant, no tenant sees nothing, RLS blocks writing
   into another tenant, composite foreign keys hold for the owner, background runs write
   into the ticket's tenant, the operator CLI).
+
+### Frontend sign-in
+- **Decision:** a `/login` page; every other route sits behind `RequireSession`, which
+  reads `GET /auth/me`. A 401 from any request clears the cached session and redirects to
+  sign-in with `?next=` (only same-app paths are followed, so a crafted link can't bounce
+  a user to another site). Signing in or out clears all cached data, since the next user
+  may belong to another tenant. The header shows the user and tenant with "Sign out"; the
+  "Reviewing as" box is gone.
