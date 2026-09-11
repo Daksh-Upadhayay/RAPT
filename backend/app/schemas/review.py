@@ -2,7 +2,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.enums import TicketCategory, TicketUrgency
 
-
 # Request bodies forbid unknown fields: a tenant_id (or anything else) in a body is a 422,
 # never silently used. The reviewer is the signed-in user.
 

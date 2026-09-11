@@ -16,17 +16,23 @@ from app.routers import (
     metrics,
     orders,
     reviews,
+    team,
     tickets,
 )
+from app.services.knowledge_documents import resume_unfinished_documents
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # In the background, so a long backlog doesn't delay startup
-    task = asyncio.create_task(resume_unfinished_runs(SessionLocal, get_drafter())) if settings.resume_unfinished_runs_on_startup else None
+    tasks = []
+    if settings.resume_unfinished_runs_on_startup:
+        tasks.append(asyncio.create_task(resume_unfinished_documents(SessionLocal)))
+        tasks.append(asyncio.create_task(resume_unfinished_runs(SessionLocal, get_drafter())))
     yield
-    if task is not None and not task.done():
-        task.cancel()
+    for task in tasks:
+        if not task.done():
+            task.cancel()
 
 
 app = FastAPI(title="RAPT Backend", lifespan=lifespan)
@@ -53,3 +59,4 @@ app.include_router(knowledge_base.router)
 app.include_router(agents.router)
 app.include_router(reviews.router)
 app.include_router(metrics.router)
+app.include_router(team.router)

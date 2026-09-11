@@ -53,3 +53,14 @@ class ModelName(StrEnum):
 class UserRole(StrEnum):
     ADMIN = "admin"  # also manages the tenant (reviewers, knowledge base)
     REVIEWER = "reviewer"
+
+
+class DocumentStatus(StrEnum):
+    PROCESSING = "processing"  # being split into sections and embedded
+    READY = "ready"
+    FAILED = "failed"
+
+
+class DocumentSource(StrEnum):
+    UPLOAD = "upload"
+    PASTE = "paste"

@@ -28,7 +28,7 @@ async def test_create_entry(client: AsyncClient, session: AsyncSession) -> None:
 
     assert resp.status_code == 201
     body = resp.json()
-    assert set(body) == {"id", "title", "content", "created_at"}  # embedding stays internal
+    assert set(body) == {"id", "document_id", "position", "title", "content", "created_at"}  # embedding stays internal
     stored = await session.get(KnowledgeBaseEntry, body["id"])
     assert len(stored.embedding) == EMBEDDING_DIM
 

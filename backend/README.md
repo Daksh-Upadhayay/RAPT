@@ -27,7 +27,11 @@ uv run python -m scripts.tenants create-user --tenant acme --email ops@acme.com 
 uv run python -m scripts.tenants list
 uv run python -m scripts.tenants reset-password --email ops@acme.com      # signs them out everywhere
 uv run python -m scripts.tenants deactivate-user --email ops@acme.com
+uv run python -m scripts.tenants delete-tenant --slug acme --yes   # a tenant and ALL its data
 ```
+
+Once signed in, a tenant's admins add their own help documents (Knowledge base page)
+and team members (Team page).
 
 `create-user` and `reset-password` print a one-time password. Existing data lives in the
 `dev` tenant (created by the Phase 7 migration); fake seed data belongs there only.

@@ -4,9 +4,11 @@ import { AppShell } from './app/AppShell'
 import { RequireSession } from './features/auth'
 import { EmptyState, Loading } from './ui'
 import { AgentTrace } from './pages/AgentTrace'
+import { Knowledge } from './pages/Knowledge'
 import { Login } from './pages/Login'
 import { ReviewQueue } from './pages/ReviewQueue'
 import { SubmitTicket } from './pages/SubmitTicket'
+import { Team } from './pages/Team'
 import { TicketDetail } from './pages/TicketDetail'
 
 // Recharts is most of the bundle: load it only when the dashboard is opened
@@ -34,6 +36,8 @@ export default function App() {
           <Route path="submit" element={<SubmitTicket />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
           <Route path="tickets/:id/trace" element={<AgentTrace />} />
+          <Route path="knowledge" element={<Knowledge />} />
+          <Route path="team" element={<Team />} />
           <Route
             path="dashboard"
             element={

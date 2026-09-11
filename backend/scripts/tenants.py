@@ -7,6 +7,7 @@ Usage (from backend/):
     uv run python -m scripts.tenants create-user --tenant acme --email ops@acme.com --name "Ada" --role admin
     uv run python -m scripts.tenants reset-password --email ops@acme.com
     uv run python -m scripts.tenants deactivate-user --email ops@acme.com
+    uv run python -m scripts.tenants delete-tenant --slug acme --yes   # everything in it, permanently
 
 create-user and reset-password print a one-time password: hand it to the person over a
 private channel. Resetting a password signs that user out everywhere.
@@ -17,13 +18,24 @@ import asyncio
 import re
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.admin_db import UnknownTenant, admin_factory, tenant_id_for
 from app.core.enums import UserRole
 from app.core.security import generate_password, hash_password
-from app.models import Tenant, Ticket, User
+from app.models import (
+    AgentLog,
+    Customer,
+    DraftResponse,
+    KnowledgeBaseEntry,
+    KnowledgeDocument,
+    ModelPrediction,
+    Order,
+    Tenant,
+    Ticket,
+    User,
+)
 
 SLUG = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$")
 
@@ -96,6 +108,23 @@ async def deactivate_user(factory, email: str) -> None:
         await session.commit()
 
 
+# Children before parents
+TENANT_DATA = (AgentLog, DraftResponse, ModelPrediction, Ticket, Order, Customer, KnowledgeBaseEntry, KnowledgeDocument, User)
+
+
+async def delete_tenant(factory, slug: str) -> dict[str, int]:
+    """Delete a tenant and every row it owns (e.g. a prospect's trial). Irreversible."""
+    tenant_id = await tenant_id_for(factory, slug)
+    counts = {}
+    async with factory() as session:
+        for model in TENANT_DATA:
+            result = await session.execute(delete(model).where(model.tenant_id == tenant_id))
+            counts[model.__tablename__] = result.rowcount
+        await session.execute(delete(Tenant).where(Tenant.id == tenant_id))
+        await session.commit()
+    return counts
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -110,6 +139,9 @@ async def main() -> None:
     p.add_argument("--role", choices=[r.value for r in UserRole], default=UserRole.REVIEWER.value)
     for command in ("reset-password", "deactivate-user"):
         sub.add_parser(command).add_argument("--email", required=True)
+    p = sub.add_parser("delete-tenant", help="delete a tenant and ALL its data")
+    p.add_argument("--slug", required=True)
+    p.add_argument("--yes", action="store_true", help="confirm: this can't be undone")
     args = parser.parse_args()
 
     async with admin_factory() as factory:
@@ -128,6 +160,11 @@ async def main() -> None:
                 case "deactivate-user":
                     await deactivate_user(factory, args.email)
                     print(f"Deactivated {args.email.lower()}")
+                case "delete-tenant":
+                    if not args.yes:
+                        raise CliError(f"this permanently deletes {args.slug!r} and all its data; rerun with --yes")
+                    counts = await delete_tenant(factory, args.slug)
+                    print(f"Deleted tenant {args.slug}: " + ", ".join(f"{n} {t}" for t, n in counts.items() if n))
         except (CliError, UnknownTenant) as exc:
             raise SystemExit(f"Error: {exc}") from exc
 

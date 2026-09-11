@@ -55,7 +55,7 @@ async def get_current_user(request: Request, factory: SessionFactoryDep) -> Curr
         raise _unauthorized("Your session has ended. Sign in again.")
     user, tenant_name = row
     # Tokens issued before a password reset (or for a deactivated user) no longer work
-    if not user.is_active or user.tenant_id != claims.tenant_id or claims.issued_at < user.password_changed_at.replace(microsecond=0):
+    if not user.is_active or user.tenant_id != claims.tenant_id or claims.issued_at < user.password_changed_at:
         raise _unauthorized("Your session has ended. Sign in again.")
     return CurrentUser(
         id=user.id, tenant_id=user.tenant_id, tenant_name=tenant_name, email=user.email, name=user.name, role=UserRole(user.role)

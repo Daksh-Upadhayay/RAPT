@@ -81,14 +81,34 @@ the separation between persistence layer and API contract layer").
   Allowed before or after approval. The review queue sorts by the corrected urgency.
 
 ### Knowledge base
+Reads are open to every signed-in user; changes are for tenant admins (Phase 9).
 - `GET /knowledge-base` — list entries
-- `POST /knowledge-base` — add entry (triggers embedding generation)
+- `POST /knowledge-base` — add one entry (embedded on create); admin
+- `PATCH /knowledge-base/{id}` — edit an entry or a document's section (re-embedded); admin
+- `DELETE /knowledge-base/{id}` — admin
+- `POST /knowledge-base/search` — `{query, k}`: what the Knowledge Agent would retrieve (preview)
+- `GET /knowledge-base/documents` — the tenant's help documents with status and section count
+- `GET /knowledge-base/documents/{id}` — a document with its sections, in order
+- `POST /knowledge-base/documents/upload` — multipart `files` (Markdown, text, HTML, PDF;
+  5 MB each, 20 per request); one result per file (added, or why not); admin. Sections
+  are built and embedded in the background (`processing` → `ready` or `failed`).
+- `POST /knowledge-base/documents/paste` — `{title, text}`; 409 for a duplicate; admin
+- `DELETE /knowledge-base/documents/{id}` — the document and its sections; admin
 
 ### Orders (read-only, seeded data)
 - `GET /orders/{id}` — order lookup (used by the Order Lookup Tool internally,
   but also useful for the frontend to display order context)
 
+### Team (Phase 9, tenant admins only)
+- `GET /team` — the tenant's users
+- `POST /team` — `{email, name, role}`; returns the member and a one-time password (409 if
+  the email has an account anywhere)
+- `PATCH /team/{id}` — `{role?, is_active?}`; an admin can't demote or deactivate themselves
+- `POST /team/{id}/reset-password` — a new one-time password; signs the member out
+
 ### Customers (added in Phase 5, for the Submit Ticket form)
+- `POST /customers` — `{name, email}`: add a customer while filing their first ticket
+  (Phase 9); 409 if the email exists in the tenant
 - `GET /customers?search=&limit=` — customers whose name or email contains `search`
   (case-insensitive), by name; the first `limit` (default 10, max 50) without it
 - `GET /customers/{id}` — one customer

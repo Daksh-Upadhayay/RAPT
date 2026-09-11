@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.tenancy import get_scoped, tenant_of
@@ -9,6 +10,10 @@ from app.models import Customer, Order
 
 
 class CustomerNotFound(Exception):
+    pass
+
+
+class CustomerExists(Exception):
     pass
 
 
@@ -39,3 +44,15 @@ async def customer_orders(session: AsyncSession, customer_id: UUID) -> Sequence[
         .order_by(Order.order_date.desc())
     )
     return (await session.scalars(stmt)).all()
+
+
+async def create_customer(session: AsyncSession, name: str, email: str) -> Customer:
+    customer = Customer(name=name.strip(), email=email.strip().lower())
+    session.add(customer)
+    try:
+        await session.commit()
+    except IntegrityError as exc:  # email is unique per tenant
+        await session.rollback()
+        raise CustomerExists from exc
+    await session.refresh(customer)
+    return customer

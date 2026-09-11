@@ -28,7 +28,7 @@ type Query = Record<string, string | number | undefined>
 
 export async function request<T>(
   path: string,
-  options: { method?: 'GET' | 'POST' | 'PUT'; body?: unknown; query?: Query } = {},
+  options: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; query?: Query } = {},
 ): Promise<T> {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(options.query ?? {})) {
@@ -43,10 +43,12 @@ export async function request<T>(
       // The session is an httpOnly cookie (sent automatically, same origin). Requests that
       // change something also carry the CSRF header the API requires.
       headers: {
-        ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        // FormData (file uploads) sets its own multipart Content-Type
+        ...(options.body === undefined || options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         ...((options.method ?? 'GET') === 'GET' ? {} : { 'X-RAPT-CSRF': '1' }),
       },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body:
+        options.body === undefined ? undefined : options.body instanceof FormData ? options.body : JSON.stringify(options.body),
     })
   } catch {
     throw new ApiError(0, 'Cannot reach the server. Check your connection and that the dev server is running.')

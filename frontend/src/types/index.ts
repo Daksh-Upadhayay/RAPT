@@ -38,6 +38,12 @@ export type AgentName = (typeof AGENT_NAMES)[number]
 export const USER_ROLES = ['admin', 'reviewer'] as const
 export type UserRole = (typeof USER_ROLES)[number]
 
+export const DOCUMENT_STATUSES = ['processing', 'ready', 'failed'] as const
+export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number]
+
+export const DOCUMENT_SOURCES = ['upload', 'paste'] as const
+export type DocumentSource = (typeof DOCUMENT_SOURCES)[number]
+
 // --- Auth (app/schemas/auth.py) ---
 
 export interface LoginRequest {
@@ -58,6 +64,11 @@ export interface MeResponse {
 
 export interface CustomerResponse {
   id: UUID
+  name: string
+  email: string
+}
+
+export interface CustomerCreate {
   name: string
   email: string
 }
@@ -146,9 +157,48 @@ export interface TriageCorrectionRequest {
 
 export interface KnowledgeBaseResponse {
   id: UUID
+  document_id: UUID | null
+  position: number | null
   title: string
   content: string
   created_at: ISODateTime
+}
+
+export interface KnowledgeBaseUpdate {
+  title: string
+  content: string
+}
+
+export interface KnowledgePasteRequest {
+  title: string
+  text: string
+}
+
+export interface KnowledgeDocumentResponse {
+  id: UUID
+  title: string
+  source: DocumentSource
+  filename: string | null
+  status: DocumentStatus
+  error: string | null
+  section_count: number
+  uploaded_by: string
+  created_at: ISODateTime
+}
+
+export interface KnowledgeDocumentDetail extends KnowledgeDocumentResponse {
+  sections: KnowledgeBaseResponse[]
+}
+
+export interface KnowledgeUploadResult {
+  filename: string
+  document: KnowledgeDocumentResponse | null
+  error: string | null
+}
+
+export interface KnowledgeSearchRequest {
+  query: string
+  k?: number
 }
 
 export interface RetrievedDoc {
@@ -156,6 +206,34 @@ export interface RetrievedDoc {
   title: string
   content: string
   similarity: number
+}
+
+// --- Team (app/schemas/team.py) ---
+
+export interface TeamMember {
+  id: UUID
+  email: string
+  name: string
+  role: UserRole
+  is_active: boolean
+  last_login_at: ISODateTime | null
+  created_at: ISODateTime
+}
+
+export interface InviteRequest {
+  email: string
+  name: string
+  role?: UserRole
+}
+
+export interface MemberUpdate {
+  role?: UserRole | null
+  is_active?: boolean | null
+}
+
+export interface PasswordIssued {
+  member: TeamMember
+  one_time_password: string
 }
 
 // --- Agent tool schemas (app/schemas/prediction.py, app/schemas/agents.py) ---

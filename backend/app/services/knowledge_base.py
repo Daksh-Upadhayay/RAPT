@@ -4,12 +4,16 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tenancy import get_scoped, tenant_of
 from app.ml.embeddings import TextTooLongError, embed_document, embed_query
-from app.core.tenancy import tenant_of
 from app.models import KnowledgeBaseEntry
 from app.schemas.knowledge_base import KnowledgeBaseCreate, RetrievedDoc
 
-__all__ = ["TextTooLongError", "create_entry", "list_entries", "search"]
+__all__ = ["EntryNotFound", "TextTooLongError", "create_entry", "delete_entry", "list_entries", "search", "update_entry"]
+
+
+class EntryNotFound(Exception):
+    pass
 
 
 async def create_entry(session: AsyncSession, data: KnowledgeBaseCreate) -> KnowledgeBaseEntry:
@@ -46,3 +50,31 @@ async def search(session: AsyncSession, query_text: str, k: int = 3) -> list[Ret
         RetrievedDoc(id=str(entry.id), title=entry.title, content=entry.content, similarity=round(1 - dist, 4))
         for entry, dist in rows
     ]
+
+
+async def update_entry(session: AsyncSession, entry_id, title: str, content: str) -> KnowledgeBaseEntry:
+    """Edit a section (or a single entry) and re-embed it."""
+    entry = await get_scoped(session, KnowledgeBaseEntry, entry_id)
+    if entry is None:
+        raise EntryNotFound
+    entry.embedding = await run_in_threadpool(embed_document, title, content)
+    entry.title, entry.content = title, content
+    await session.commit()
+    await session.refresh(entry)
+    return entry
+
+
+async def delete_entry(session: AsyncSession, entry_id) -> None:
+    from app.services.knowledge_documents import (
+        refresh_section_count,  # avoid an import cycle
+    )
+
+    entry = await get_scoped(session, KnowledgeBaseEntry, entry_id)
+    if entry is None:
+        raise EntryNotFound
+    document_id = entry.document_id
+    await session.delete(entry)
+    await session.flush()
+    if document_id is not None:
+        await refresh_section_count(session, document_id)
+    await session.commit()

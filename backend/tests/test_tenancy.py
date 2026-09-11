@@ -185,3 +185,12 @@ async def test_cli_reset_password_replaces_the_old_one(admin_factory, anon_clien
     new = await anon_client.post("/auth/login", json={"email": account.email, "password": new_password})
 
     assert (old.status_code, new.status_code) == (401, 200)
+
+
+async def test_cli_delete_tenant_removes_only_that_tenant(admin_factory, session, customer, theirs, other_tenant) -> None:
+    counts = await tenant_cli.delete_tenant(admin_factory, "globex")
+
+    assert counts["tickets"] == 1 and counts["knowledge_base"] == 1 and counts["customers"] == 1
+    async with admin_factory() as s:
+        assert await s.get(type(other_tenant), other_tenant.id) is None
+    assert (await session.execute(text("SELECT count(*) FROM customers"))).scalar_one() == 1  # ours untouched

@@ -40,11 +40,15 @@ export function ReviewQueue() {
         <ErrorNotice error={queue.error} onRetry={() => void queue.refetch()} />
       ) : queue.data.length === 0 ? (
         <EmptyState title="Nothing to review">
-          Tickets arrive here once the agents have drafted a reply.{' '}
+          Tickets arrive here once the agents have drafted a reply. New here? Add your help documents to the{' '}
+          <Link to="/knowledge" className="font-semibold text-ink underline underline-offset-2">
+            knowledge base
+          </Link>
+          , then{' '}
           <Link to="/submit" className="font-semibold text-ink underline underline-offset-2">
-            Submit a ticket
+            submit a ticket
           </Link>{' '}
-          to start one.
+          to see a draft.
         </EmptyState>
       ) : (
         <section aria-labelledby="awaiting">

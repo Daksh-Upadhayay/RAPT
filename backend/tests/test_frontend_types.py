@@ -25,6 +25,17 @@ EXPECTED = {
     "ReviewEditRequest",
     "TriageCorrectionRequest",
     "KnowledgeBaseResponse",
+    "KnowledgeBaseUpdate",
+    "KnowledgePasteRequest",
+    "KnowledgeDocumentResponse",
+    "KnowledgeDocumentDetail",
+    "KnowledgeUploadResult",
+    "KnowledgeSearchRequest",
+    "CustomerCreate",
+    "TeamMember",
+    "InviteRequest",
+    "MemberUpdate",
+    "PasswordIssued",
     "MetricsSummary",
     "CategoryCount",
     "DailyEscalation",
@@ -38,6 +49,8 @@ ENUM_CONSTANTS = {
     "TicketStatus": "TICKET_STATUSES",
     "AgentName": "AGENT_NAMES",
     "UserRole": "USER_ROLES",
+    "DocumentStatus": "DOCUMENT_STATUSES",
+    "DocumentSource": "DOCUMENT_SOURCES",
 }
 
 

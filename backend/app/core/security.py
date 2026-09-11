@@ -62,7 +62,9 @@ def create_token(user_id: uuid.UUID, tenant_id: uuid.UUID, role: str, now: datet
         "sub": str(user_id),
         "tenant_id": str(tenant_id),
         "role": role,
-        "iat": int(now.timestamp()),
+        # Sub-second precision (JWT allows it): a token issued in the same second as a
+        # password reset must still count as older than the reset
+        "iat": now.timestamp(),
         "exp": int((now + timedelta(hours=settings.jwt_ttl_hours)).timestamp()),
     }
     return jwt.encode(payload, _secret(), algorithm=JWT_ALGORITHM)

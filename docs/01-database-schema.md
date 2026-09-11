@@ -89,6 +89,26 @@ Created in Phase 3 by its own migration (`a3f9c1d27e45`, which also runs
 | embedding | VECTOR(384) | embedding of "title. content", unit length; HNSW index with cosine distance |
 | created_at | TIMESTAMPTZ | default now() |
 
+### `kb_documents` (Phase 9)
+Help documents a tenant uploaded or pasted; their sections are `knowledge_base` rows.
+| Column | Type | Notes |
+|---|---|---|
+| id | UUID PK | |
+| tenant_id | UUID FK -> tenants.id | |
+| title | TEXT | |
+| source | TEXT | `upload`, `paste` |
+| filename | TEXT | nullable (pasted text) |
+| content | TEXT | extracted text, headings as Markdown `#` lines |
+| content_hash | TEXT | sha256 of `content`; the same document can't be added twice per tenant |
+| status | TEXT | `processing`, `ready`, `failed` |
+| error | TEXT | nullable — why processing failed |
+| section_count | INTEGER | |
+| uploaded_by | TEXT | the admin's email |
+| created_at | TIMESTAMPTZ | default now() |
+
+`knowledge_base` also has `document_id` (nullable, same-tenant FK to `kb_documents`,
+ON DELETE CASCADE) and `position` (order within the document).
+
 ### `agent_logs`
 Tracks every agent step for the "agent trace view" in the frontend.
 | Column | Type | Notes |

@@ -76,3 +76,13 @@ async def test_get_customer(client: AsyncClient, customer: Customer) -> None:
 async def test_unknown_customer_is_404(client: AsyncClient) -> None:
     assert (await client.get(f"/customers/{uuid4()}")).status_code == 404
     assert (await client.get(f"/customers/{uuid4()}/orders")).status_code == 404
+
+
+async def test_create_customer_for_a_first_ticket(client) -> None:
+    resp = await client.post("/customers", json={"name": "Jo Bloggs", "email": "Jo@Example.com"})
+
+    assert resp.status_code == 201
+    assert resp.json()["email"] == "jo@example.com"
+    again = await client.post("/customers", json={"name": "Jo", "email": "jo@example.com"})
+    assert again.status_code == 409
+    assert (await client.post("/customers", json={"name": "Bad", "email": "not-an-email"})).status_code == 422

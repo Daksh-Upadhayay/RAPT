@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { customerKeys, getCustomerOrders } from '../../api/customers'
+import { createCustomer, customerKeys, getCustomerOrders } from '../../api/customers'
 import { createTicket, ticketKeys } from '../../api/tickets'
 import { ORDER_STATUS_LABELS, calendarDate, money } from '../../lib/format'
 import type { CustomerResponse } from '../../types'
-import { Button, ErrorNotice, Field, Input, Select, Sheet, Textarea } from '../../ui'
+import { Button, ErrorNotice, Field, Input, Segmented, Select, Sheet, Textarea } from '../../ui'
 import { CustomerPicker } from './CustomerPicker'
 
 /**
@@ -16,6 +16,10 @@ export function SubmitTicketForm() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [customer, setCustomer] = useState<CustomerResponse | null>(null)
+  // A new business has no customers yet: add one while filing their first ticket
+  const [customerMode, setCustomerMode] = useState<'existing' | 'new'>('existing')
+  const [newName, setNewName] = useState('')
+  const [newEmail, setNewEmail] = useState('')
   const [orderId, setOrderId] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
@@ -27,15 +31,21 @@ export function SubmitTicketForm() {
     enabled: customer !== null,
   })
   const submit = useMutation({
-    mutationFn: createTicket,
+    mutationFn: async (ticket: { subject: string; body: string; order_id: string | null }) => {
+      const customerId = customer
+        ? customer.id
+        : (await createCustomer({ name: newName.trim(), email: newEmail.trim() })).id
+      return createTicket({ customer_id: customerId, ...ticket })
+    },
     onSuccess: (ticket) => {
       void queryClient.invalidateQueries({ queryKey: ticketKeys.all })
       navigate(`/tickets/${ticket.id}`)
     },
   })
 
+  const newCustomerValid = newName.trim() !== '' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail.trim())
   const errors = {
-    customer: customer ? null : 'Choose who this ticket is from.',
+    customer: customer || (customerMode === 'new' && newCustomerValid) ? null : customerMode === 'new' ? 'Add the customer’s name and a valid email.' : 'Choose who this ticket is from.',
     subject: subject.trim() ? null : 'Add a subject.',
     body: body.trim() ? null : 'Write the customer’s message.',
   }
@@ -44,13 +54,28 @@ export function SubmitTicketForm() {
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     setAttempted(true)
-    if (!customer || errors.subject || errors.body) return
-    submit.mutate({ customer_id: customer.id, subject: subject.trim(), body: body.trim(), order_id: orderId || null })
+    if (errors.customer || errors.subject || errors.body) return
+    submit.mutate({ subject: subject.trim(), body: body.trim(), order_id: orderId || null })
   }
 
   return (
     <form onSubmit={onSubmit} noValidate className="max-w-2xl space-y-6">
-      <Sheet title="From">
+      <Sheet
+        title="From"
+        aside={
+          !customer && (
+            <Segmented
+              label="Customer"
+              value={customerMode}
+              onChange={setCustomerMode}
+              options={[
+                { value: 'existing', label: 'Existing customer' },
+                { value: 'new', label: 'New customer' },
+              ]}
+            />
+          )
+        }
+      >
         {customer ? (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-4">
@@ -84,6 +109,15 @@ export function SubmitTicketForm() {
                   </option>
                 ))}
               </Select>
+            </Field>
+          </div>
+        ) : customerMode === 'new' ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field id="new-name" label="Name" error={attempted && !newName.trim() ? 'Add a name.' : null}>
+              <Input id="new-name" value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={200} />
+            </Field>
+            <Field id="new-email" label="Email" error={attempted && !newCustomerValid && newName.trim() ? 'Add a valid email.' : null}>
+              <Input id="new-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
             </Field>
           </div>
         ) : (

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { useReviewQueue } from '../features/review'
-import { UserMenu } from '../features/auth'
+import { UserMenu, useSession } from '../features/auth'
 
 function QueueCount() {
   // Shares the review queue's cache, so the count stays fresh on every page
@@ -32,6 +32,7 @@ function NavItem({ to, children }: { to: string; children: ReactNode }) {
 
 /** The frame around every page: wordmark, the three places, and who is signed in. */
 export function AppShell() {
+  const { data: me } = useSession()
   return (
     <div className="min-h-screen">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-paper focus:px-3 focus:py-2">
@@ -48,7 +49,9 @@ export function AppShell() {
               <QueueCount />
             </NavItem>
             <NavItem to="/submit">Submit a ticket</NavItem>
+            <NavItem to="/knowledge">Knowledge base</NavItem>
             <NavItem to="/dashboard">Dashboard</NavItem>
+            {me?.role === 'admin' && <NavItem to="/team">Team</NavItem>}
           </nav>
           <div className="ml-auto flex h-14 items-center sm:ml-0">
             <UserMenu />

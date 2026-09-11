@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Index, Text
+from sqlalchemy import ForeignKeyConstraint, Index, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config import EMBEDDING_DIM
@@ -21,11 +21,19 @@ class KnowledgeBaseEntry(Base):
             postgresql_using="hnsw",
             postgresql_ops={"embedding": "vector_cosine_ops"},
         ),
+        # Sections belong to a document of the same tenant; deleting it deletes them
+        ForeignKeyConstraint(
+            ["tenant_id", "document_id"], ["kb_documents.tenant_id", "kb_documents.id"], ondelete="CASCADE"
+        ),
+        UniqueConstraint("document_id", "position", name="uq_knowledge_base_document_id_position"),
     )
 
     id: Mapped[uuid.UUID] = uuid_pk()
     # Search always filters by tenant: retrieval never crosses tenants (Phase 7)
     tenant_id: Mapped[uuid.UUID] = tenant_id_column()
+    # The document this section came from; null for entries added one by one
+    document_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
+    position: Mapped[int | None] = mapped_column(Integer)  # order within the document
     title: Mapped[str] = mapped_column(Text)
     content: Mapped[str] = mapped_column(Text)
     # Embedding of "title. content", unit length (see app/ml/embeddings.py). Accepts a

@@ -44,7 +44,9 @@ src/
     trace/         run grouping + log parsing (model.ts), TraceTimeline
     intake/        SubmitTicketForm, CustomerPicker
     metrics/       MetricsOverview, charts, ChartCard, chart theme
-    auth/          useSession, useLogin, useLogout, LoginForm, RequireSession (route guard), UserMenu
+    auth/          useSession, useLogin, useLogout, LoginForm, RequireSession, RequireAdmin, UserMenu
+    knowledge/     AddDocuments (upload/paste), DocumentList (status, sections, edit), SearchPreview
+    team/          TeamManager (invite with one-time password, roles, deactivate, reset)
   pages/           thin: compose features into a screen, handle the URL
   app/             AppShell (header + nav), queryClient
   api/             fetch wrapper (client.ts) + one module per backend resource

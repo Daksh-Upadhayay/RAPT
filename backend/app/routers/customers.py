@@ -7,7 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.deps import SessionDep
-from app.schemas.customer import CustomerResponse
+from app.schemas.customer import CustomerCreate, CustomerResponse
 from app.schemas.order import OrderResponse
 from app.services import customers as customer_service
 
@@ -23,6 +23,16 @@ async def search_customers(
     """Customers whose name or email contains `search`; the first `limit` by name without it."""
     customers = await customer_service.search_customers(session, search, limit)
     return [CustomerResponse.model_validate(c) for c in customers]
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_customer(data: CustomerCreate, session: SessionDep) -> CustomerResponse:
+    """Add a customer (e.g. while filing their first ticket)."""
+    try:
+        customer = await customer_service.create_customer(session, data.name, data.email)
+    except customer_service.CustomerExists as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, "A customer with that email already exists. Search for them instead.") from exc
+    return CustomerResponse.model_validate(customer)
 
 
 @router.get("/{customer_id}")

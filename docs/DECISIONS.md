@@ -959,3 +959,71 @@ the partners ask for.
 - Tests fake the providers with `httpx.MockTransport`: request shape, retries, giving up
   on long waits, non-retryable errors, fallback order, the tenant allow-list, masking,
   chain construction from keys, the tenant reaching the drafter, and resuming runs.
+
+---
+
+## Phase 9 — Knowledge onboarding, team, first tickets
+
+### Why this phase has no real data yet
+- There are no clients or real documents yet. The pipeline doesn't depend on any
+  particular business: it's built and tested with documents that exist only inside the
+  tests, and checked by hand in a throwaway tenant that was deleted afterwards. The
+  first real content will be a prospect's own FAQ, which doubles as the demo.
+
+### Help documents become sections
+- **Formats:** Markdown, text, HTML (Python's `html.parser`: headings kept; nav, header,
+  footer, scripts and styles dropped) and PDF (`pypdf`; no OCR, so scanned PDFs fail
+  with a clear message). Pasted text is treated as Markdown.
+- **One shape:** every format is converted to paragraphs with Markdown `#` headings,
+  stored on `kb_documents.content`, so the chunker only understands one thing and a
+  document can be reprocessed later without the original file.
+- **Sections follow headings:** one section per heading, paragraphs packed up to 300
+  tokens (the embedding model reads 512); an oversized paragraph is split at sentences,
+  then words. Titles are "Document: Heading / Subheading" (the document's own top
+  heading isn't repeated); a heading split in several sections gets "(part n)".
+- **Background processing:** upload returns at once with status `processing`; sections
+  are embedded in a background task, and the page polls until `ready` or `failed` (with
+  the reason). Documents a restart left `processing` are finished at startup through
+  `unfinished_kb_documents()` (SECURITY DEFINER, like the agent-run recovery).
+- **Guards:** 5 MB per file, 20 files per upload, at most 400 sections per document; the
+  same text twice in a tenant is refused (sha256); each file is reported separately so
+  one bad file doesn't stop the rest.
+- **Editing:** a section can be edited (re-embedded) or removed; removing a document
+  removes its sections (ON DELETE CASCADE on a same-tenant foreign key).
+- **Search preview:** `POST /knowledge-base/search` powers "Test a question", so an admin
+  sees which sections a draft would be based on before any ticket arrives.
+- **Not done:** importing from a URL. Fetching arbitrary URLs from the server needs SSRF
+  protection (private addresses, redirects, size limits); it's worth its own step.
+
+### First tickets without seeded customers
+- A new tenant has no customers or orders, and a ticket needs a customer. The Submit
+  page can add a new customer (name and email; `POST /customers`, unique per tenant)
+  while filing the ticket. Linking an order stays optional until there's an order source.
+
+### Team management
+- Admins list, invite (reviewer or admin), deactivate, reactivate, change roles and reset
+  passwords. With no free email service, a new or reset password is shown once as a
+  one-time password for the admin to pass on.
+- An admin can't demote or deactivate themselves, so a tenant can't lose its last admin
+  by accident.
+- Emails are unique across tenants, so inviting an email that exists elsewhere is a 409.
+  That reveals an account exists somewhere; acceptable for invite-only accounts.
+- The API role got INSERT on `users` and UPDATE on exactly the columns these actions
+  change; RLS still limits it to the tenant.
+
+### Roles in the UI and API
+- Knowledge-base changes and the Team page are admin-only (403 for reviewers); reading
+  the knowledge base and the search preview stay open, since reviewers check grounding.
+  The nav shows Team to admins only.
+
+### Found on the way
+- A token issued in the same second as a password reset stayed valid (`iat` was whole
+  seconds). `iat` now keeps sub-second precision, which JWT allows.
+- Operator CLI: `delete-tenant --slug x --yes` removes a tenant and everything it owns
+  (e.g. a prospect's trial); it refuses without `--yes`.
+
+### Checked end to end
+- In a throwaway tenant: upload a policy file (3 sections, ready in seconds), "Test a
+  question" found the late-delivery section, invite a reviewer (one-time password
+  shown), file a ticket for a new customer, and Groq's draft quoted the uploaded policy
+  (carrier trace, update within 24 hours). The tenant was deleted afterwards.
