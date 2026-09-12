@@ -69,6 +69,9 @@ CORES: dict[C, list[str]] = {
         "Has my payment for order {oid} gone through? The status hasn't changed.",
         "When is my {item} expected to arrive?",
         "What stage is order {oid} at right now?",
+        # v2: "arrived" in a tracking status, not at the customer's door
+        "Tracking shows order {oid} arrived at the sorting facility. What happens next?",
+        "My {item} order says 'arrived at carrier hub'. Does that mean it has shipped?",
     ],
     C.DELIVERY_DELAY: [
         "My package was supposed to arrive {days} ago and it's still not here, no courier updates.",
@@ -98,6 +101,17 @@ CORES: dict[C, list[str]] = {
         "My order is late. It was supposed to be here already.",
         "It's been stuck in customs for {days} and is now past the delivery estimate.",
         "The package is overdue by {days} and the courier won't give me a new date.",
+        # v2: "not arrived" phrasings. In v1 "arrived" only ever appeared in damaged_item
+        # rows, so the model took the word itself as a sign of damage.
+        "I ordered a {item} {days} ago and it still hasn't arrived. Where is it?",
+        "My order hasn't arrived yet and it was meant to be here by {weekday}.",
+        "Order {oid} never arrived. The delivery date was {days} ago.",
+        "It's been {days} and my parcel has not arrived.",
+        "My {item} still has not arrived even though it was due {days} ago.",
+        "Nothing has arrived for order {oid} and it's now {days} overdue.",
+        "My package didn't arrive on {weekday} like the tracking said it would.",
+        "Still waiting for my {item}. It hasn't arrived and the delivery date has passed.",
+        "Tracking says it arrived at the local depot {days} ago but it still hasn't been delivered to me.",
     ],
     C.DAMAGED_ITEM: [
         "I ordered a {item} and when it arrived, the box was completely crushed and the item is broken.",
@@ -205,6 +219,8 @@ SHORT: dict[C, list[str]] = {
         "package late", "my {item} is overdue", "delivery delayed", "order {oid} late", "delivery date passed",
         "still not delivered, past due date", "parcel stuck in transit {days}", "why is my delivery so late",
         "late delivery {oid}", "my order is {days} late",
+        "my order has not arrived", "{item} hasn't arrived yet", "order {oid} never arrived",
+        "parcel not arrived", "still hasn't arrived, past due",
     ],
     C.DAMAGED_ITEM: [
         "{item} arrived broken", "damaged {item}", "item damaged in shipping", "broken {item} received",

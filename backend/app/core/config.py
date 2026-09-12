@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     login_window_minutes: int = 15
 
     # Which trained artifact under app/ml/artifacts/<model>/ to serve
-    category_model_version: str = "v1"
+    category_model_version: str = "v2"
     urgency_model_version: str = "v4"
 
     # Knowledge-base (RAG) embeddings. Its output size must equal EMBEDDING_DIM below.

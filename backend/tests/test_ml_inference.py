@@ -16,6 +16,10 @@ from app.ml.urgency_model import predict_urgency
         ("I returned the jacket two weeks ago and still haven't got my refund.", TicketCategory.REFUND_REQUEST),
         ("The lamp arrived broken, the glass shade is shattered.", TicketCategory.DAMAGED_ITEM),
         ("Does the air fryer come with a warranty?", TicketCategory.PRODUCT_QUESTION),
+        # v1 read "arrived" as damage: every training row with the word was damaged_item
+        ("my order has not arrived", TicketCategory.DELIVERY_DELAY),
+        ("I ordered a lamp two weeks ago and it still has not arrived.", TicketCategory.DELIVERY_DELAY),
+        ("The kettle arrived cracked.", TicketCategory.DAMAGED_ITEM),
     ],
 )
 def test_predict_category(text: str, expected: TicketCategory) -> None:

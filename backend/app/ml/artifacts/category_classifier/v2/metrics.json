@@ -1,0 +1,635 @@
+{
+  "model": "category_classifier",
+  "version": "v2",
+  "classes": [
+    "order_status",
+    "refund_request",
+    "damaged_item",
+    "delivery_delay",
+    "product_question",
+    "cancellation"
+  ],
+  "params": {
+    "n_estimators": 1000,
+    "learning_rate": 0.1,
+    "max_depth": 4,
+    "subsample": 0.8,
+    "colsample_bytree": 0.5,
+    "tree_method": "hist",
+    "early_stopping_rounds": 30,
+    "eval_metric": "mlogloss",
+    "random_state": 42,
+    "best_iteration": 184,
+    "val_macro_f1": 0.9396
+  },
+  "selection": [
+    {
+      "max_depth": 4,
+      "best_iteration": 184,
+      "val_macro_f1": 0.9396
+    },
+    {
+      "max_depth": 6,
+      "best_iteration": 182,
+      "val_macro_f1": 0.9334
+    }
+  ],
+  "results": {
+    "XGBoost": {
+      "val": {
+        "n": 799,
+        "accuracy": 0.9399,
+        "macro_f1": 0.9396,
+        "per_class": {
+          "order_status": {
+            "precision": 0.976,
+            "recall": 0.9037,
+            "f1": 0.9385,
+            "support": 135
+          },
+          "refund_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 135
+          },
+          "damaged_item": {
+            "precision": 0.8069,
+            "recall": 0.975,
+            "f1": 0.883,
+            "support": 120
+          },
+          "delivery_delay": {
+            "precision": 0.874,
+            "recall": 0.7986,
+            "f1": 0.8346,
+            "support": 139
+          },
+          "product_question": {
+            "precision": 0.9926,
+            "recall": 1.0,
+            "f1": 0.9963,
+            "support": 135
+          },
+          "cancellation": {
+            "precision": 1.0,
+            "recall": 0.9704,
+            "f1": 0.985,
+            "support": 135
+          }
+        },
+        "confusion_matrix": [
+          [
+            122,
+            0,
+            0,
+            13,
+            0,
+            0
+          ],
+          [
+            0,
+            135,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            117,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            28,
+            111,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            135,
+            0
+          ],
+          [
+            3,
+            0,
+            0,
+            0,
+            1,
+            131
+          ]
+        ],
+        "confidence": {
+          "mean": 0.9454,
+          "share_below_threshold": 0.0188,
+          "accuracy_above_threshold": 0.9503,
+          "accuracy_below_threshold": 0.4
+        }
+      },
+      "test": {
+        "n": 803,
+        "accuracy": 0.9153,
+        "macro_f1": 0.916,
+        "per_class": {
+          "order_status": {
+            "precision": 0.8851,
+            "recall": 0.9704,
+            "f1": 0.9258,
+            "support": 135
+          },
+          "refund_request": {
+            "precision": 0.9923,
+            "recall": 0.9556,
+            "f1": 0.9736,
+            "support": 135
+          },
+          "damaged_item": {
+            "precision": 1.0,
+            "recall": 0.8222,
+            "f1": 0.9024,
+            "support": 135
+          },
+          "delivery_delay": {
+            "precision": 0.7626,
+            "recall": 0.7626,
+            "f1": 0.7626,
+            "support": 139
+          },
+          "product_question": {
+            "precision": 0.8913,
+            "recall": 0.9919,
+            "f1": 0.9389,
+            "support": 124
+          },
+          "cancellation": {
+            "precision": 0.9854,
+            "recall": 1.0,
+            "f1": 0.9926,
+            "support": 135
+          }
+        },
+        "confusion_matrix": [
+          [
+            131,
+            0,
+            0,
+            3,
+            1,
+            0
+          ],
+          [
+            0,
+            129,
+            0,
+            6,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            111,
+            24,
+            0,
+            0
+          ],
+          [
+            17,
+            0,
+            0,
+            106,
+            14,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            0,
+            123,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            135
+          ]
+        ],
+        "confidence": {
+          "mean": 0.9397,
+          "share_below_threshold": 0.0399,
+          "accuracy_above_threshold": 0.9364,
+          "accuracy_below_threshold": 0.4062
+        }
+      },
+      "handwritten": {
+        "n": 120,
+        "accuracy": 0.8583,
+        "macro_f1": 0.8571,
+        "per_class": {
+          "order_status": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8,
+            "support": 20
+          },
+          "refund_request": {
+            "precision": 0.9474,
+            "recall": 0.9,
+            "f1": 0.9231,
+            "support": 20
+          },
+          "damaged_item": {
+            "precision": 0.8333,
+            "recall": 0.75,
+            "f1": 0.7895,
+            "support": 20
+          },
+          "delivery_delay": {
+            "precision": 0.8421,
+            "recall": 0.8,
+            "f1": 0.8205,
+            "support": 20
+          },
+          "product_question": {
+            "precision": 0.8182,
+            "recall": 0.9,
+            "f1": 0.8571,
+            "support": 20
+          },
+          "cancellation": {
+            "precision": 0.9091,
+            "recall": 1.0,
+            "f1": 0.9524,
+            "support": 20
+          }
+        },
+        "confusion_matrix": [
+          [
+            16,
+            0,
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            0,
+            18,
+            0,
+            0,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            15,
+            2,
+            2,
+            0
+          ],
+          [
+            3,
+            1,
+            0,
+            16,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            2,
+            0,
+            18,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            20
+          ]
+        ],
+        "confidence": {
+          "mean": 0.8855,
+          "share_below_threshold": 0.1,
+          "accuracy_above_threshold": 0.8981,
+          "accuracy_below_threshold": 0.5
+        }
+      }
+    },
+    "LogReg baseline": {
+      "val": {
+        "n": 799,
+        "accuracy": 0.9737,
+        "macro_f1": 0.9744,
+        "per_class": {
+          "order_status": {
+            "precision": 0.9764,
+            "recall": 0.9185,
+            "f1": 0.9466,
+            "support": 135
+          },
+          "refund_request": {
+            "precision": 1.0,
+            "recall": 0.9556,
+            "f1": 0.9773,
+            "support": 135
+          },
+          "damaged_item": {
+            "precision": 0.9917,
+            "recall": 0.9917,
+            "f1": 0.9917,
+            "support": 120
+          },
+          "delivery_delay": {
+            "precision": 0.8968,
+            "recall": 1.0,
+            "f1": 0.9456,
+            "support": 139
+          },
+          "product_question": {
+            "precision": 0.9926,
+            "recall": 1.0,
+            "f1": 0.9963,
+            "support": 135
+          },
+          "cancellation": {
+            "precision": 1.0,
+            "recall": 0.9778,
+            "f1": 0.9888,
+            "support": 135
+          }
+        },
+        "confusion_matrix": [
+          [
+            124,
+            0,
+            1,
+            9,
+            1,
+            0
+          ],
+          [
+            0,
+            129,
+            0,
+            6,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            119,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            139,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            135,
+            0
+          ],
+          [
+            3,
+            0,
+            0,
+            0,
+            0,
+            132
+          ]
+        ]
+      },
+      "test": {
+        "n": 803,
+        "accuracy": 0.9925,
+        "macro_f1": 0.9925,
+        "per_class": {
+          "order_status": {
+            "precision": 0.9924,
+            "recall": 0.9704,
+            "f1": 0.9813,
+            "support": 135
+          },
+          "refund_request": {
+            "precision": 0.9926,
+            "recall": 0.9926,
+            "f1": 0.9926,
+            "support": 135
+          },
+          "damaged_item": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 135
+          },
+          "delivery_delay": {
+            "precision": 0.9929,
+            "recall": 1.0,
+            "f1": 0.9964,
+            "support": 139
+          },
+          "product_question": {
+            "precision": 0.9919,
+            "recall": 0.9919,
+            "f1": 0.9919,
+            "support": 124
+          },
+          "cancellation": {
+            "precision": 0.9854,
+            "recall": 1.0,
+            "f1": 0.9926,
+            "support": 135
+          }
+        },
+        "confusion_matrix": [
+          [
+            131,
+            0,
+            0,
+            1,
+            1,
+            2
+          ],
+          [
+            1,
+            134,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            135,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            139,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            0,
+            123,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            135
+          ]
+        ]
+      },
+      "handwritten": {
+        "n": 120,
+        "accuracy": 0.875,
+        "macro_f1": 0.8775,
+        "per_class": {
+          "order_status": {
+            "precision": 0.8889,
+            "recall": 0.8,
+            "f1": 0.8421,
+            "support": 20
+          },
+          "refund_request": {
+            "precision": 0.9,
+            "recall": 0.9,
+            "f1": 0.9,
+            "support": 20
+          },
+          "damaged_item": {
+            "precision": 0.8182,
+            "recall": 0.9,
+            "f1": 0.8571,
+            "support": 20
+          },
+          "delivery_delay": {
+            "precision": 0.7083,
+            "recall": 0.85,
+            "f1": 0.7727,
+            "support": 20
+          },
+          "product_question": {
+            "precision": 1.0,
+            "recall": 0.85,
+            "f1": 0.9189,
+            "support": 20
+          },
+          "cancellation": {
+            "precision": 1.0,
+            "recall": 0.95,
+            "f1": 0.9744,
+            "support": 20
+          }
+        },
+        "confusion_matrix": [
+          [
+            16,
+            0,
+            1,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            18,
+            0,
+            2,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            18,
+            1,
+            0,
+            0
+          ],
+          [
+            1,
+            2,
+            0,
+            17,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            17,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1,
+            0,
+            19
+          ]
+        ]
+      }
+    }
+  },
+  "metadata": {
+    "trained_at": "2026-09-12T17:09:12+00:00",
+    "dataset": "data/processed/tickets.csv",
+    "dataset_sha256": "ceb8c57d745eb0eaf2e475900ae382c8e1ea72eb7ebc5c411eef5a3c3542b635",
+    "handwritten_sha256": "a09d90640a7d10e530ca4bd2e4e596b2c9b883c86e8f89a18000b7143a39dfcf",
+    "python": "3.12.5",
+    "sklearn": "1.9.0",
+    "xgboost": "3.4.1",
+    "n_train": 3798,
+    "feedback": {
+      "path": "data/feedback/corrections.csv",
+      "sha256": "d400d2eda7711fd839d44dbd708e678655c5330543b6c9b5f3ad4cbba56087f2",
+      "rows": 0,
+      "weight": 10.0
+    }
+  }
+}

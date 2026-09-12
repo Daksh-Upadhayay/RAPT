@@ -1113,3 +1113,28 @@ the partners ask for.
   replacement no policy states. The Draft Agent's prompt forbids that; it's a reason to
   load a business's policies before switching its form on, and worth a stricter prompt
   check later.
+
+### Category classifier v2: "not arrived" is a delivery delay (after the first deploy)
+- **Found on the live site:** "my order has not arrived" was triaged as a damaged item with
+  0.90 confidence. Every one of the 286 training rows containing "arrived" was a
+  damaged_item template ("arrived broken", "arrived cracked"), while delivery-delay rows
+  said "haven't received" or "hasn't delivered". The model had learned the word itself as
+  a sign of damage; v1's hand-written errors showed the same shortcut ("hasn't arrived",
+  "arrived at the regional hub", "the one I received").
+- **Change:** delivery-delay templates phrased with "arrive" ("still hasn't arrived",
+  "never arrived", "didn't arrive on Friday") and two order-status ones where "arrived"
+  is a tracking status ("arrived at the sorting facility"). The dataset was rebuilt with
+  the same seed and v2 trained with the same recipe.
+- **Measured:** the hand-written set went from 0.82 to 0.86 macro-F1. The in-distribution
+  test split fell from 0.98 to 0.92, but that split holds out only ~5 template groups per
+  class and a rebuild reshuffles them; grouped 5-fold cross-validation puts both template
+  sets at the same level (0.900 ± 0.039 old, 0.899 ± 0.032 new). The live failures are
+  fixed ("not arrived" → delivery_delay at 0.97-1.00) and "arrived cracked/broken" stays
+  damaged_item. Caveat: I had seen v1's hand-written errors before writing the templates,
+  so the gain on that set is slightly optimistic.
+- **Known weaker case:** "Where is my package? It was supposed to arrive last week" moved
+  from delivery_delay (0.74) to order_status (0.38). Below the 0.6 threshold it is
+  escalated, so a reviewer sees it first; reviewer corrections feed the next retrain.
+- **Also seen:** the logistic-regression baseline beats XGBoost on the hand-written set for
+  both template sets (0.88-0.89 vs 0.82-0.86). Worth revisiting the model choice once
+  reviewer corrections give a larger real-ticket evaluation set.
