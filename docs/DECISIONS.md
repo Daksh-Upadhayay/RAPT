@@ -1060,9 +1060,23 @@ the partners ask for.
   every request would come from Caddy and the per-IP login limit would lock everyone out
   at once. The API port is only reachable on the compose network.
 - **Models baked into the image** and Hugging Face set offline: no downloads at startup.
-- **CPU-only torch on x86:** PyPI's Linux x86 torch pulls in ~3 GB of CUDA libraries, so
-  `pyproject.toml` takes torch from PyTorch's CPU index on x86 Linux only (Arm and macOS
-  wheels are CPU-only already).
+- **CPU-only torch and XGBoost on Linux:** PyPI's Linux torch wheels pull in several GB
+  of CUDA libraries on both x86 and Arm (the first guess, that Arm wheels were CPU-only,
+  was wrong: a local image build on Apple silicon filled the disk). `pyproject.toml` takes
+  torch from PyTorch's CPU index on every Linux, and uses `xgboost-cpu` there (the same
+  library without CUDA and NCCL). macOS keeps the PyPI wheels, which are CPU-only.
+- **Image size:** uv's download cache sits in a BuildKit cache mount and the app files stay
+  root-owned (the app only reads them; a `chown -R` layer stored a second copy of every
+  file). The API image went from 6.6 GB to 2.7 GB.
+- **Blank keys are no keys:** Compose passes an unset variable through as `""`, which
+  crashed startup (the Gemini client refused an empty key). API keys and the JWT secret
+  now treat a blank value as unset; other settings keep `""` (an empty
+  `GEMINI_ALLOWED_TENANTS` still means no tenant may use Gemini).
+- **Checked locally before the first deploy** (the full stack on Apple silicon, HTTPS on
+  `localhost`): migrations and the API role, the security headers and the HTTP-to-HTTPS
+  redirect, the session cookie's flags, an admin created with the ops command, a help
+  document uploaded and embedded, a contact-form message triaged and drafted from that
+  document, and a backup restored after deleting the business.
 - **Secrets** live in `deploy/.env` on the server (gitignored, and `.dockerignore`
   keeps every `.env` out of images).
 - **Headers:** HSTS, a strict Content-Security-Policy, `X-Frame-Options: DENY`, no

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -64,6 +64,13 @@ class Settings(BaseSettings):
     # Escalation Agent rules (03-agent-architecture.md)
     escalation_min_confidence: float = 0.6
     refund_escalation_threshold: float = 100.0
+
+    @field_validator("jwt_secret", "groq_api_key", "cerebras_api_key", "gemini_api_key", "anthropic_api_key", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, value: object) -> object:
+        # Docker Compose passes an unset variable through as "": that means no key, not an
+        # empty one (which would build a provider link that fails on every call)
+        return None if isinstance(value, str) and not value.strip() else value
 
 
 # Dimension of the knowledge_base.embedding pgvector column (set by its migration).

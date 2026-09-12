@@ -29,14 +29,18 @@ dependencies = [
     "torch>=2.14",
     "uvicorn>=0.52.4",
     "vadersentiment>=3.3.2",
-    "xgboost>=3.4.1",
+    # On Linux the xgboost wheel bundles CUDA and pulls in NCCL; xgboost-cpu is the same
+    # library (same version, same `import xgboost`) without them.
+    "xgboost>=3.4.1; sys_platform != 'linux'",
+    "xgboost-cpu>=3.4.1; sys_platform == 'linux'",
 ]
 
 # On x86-64 Linux the default PyPI torch wheel pulls in ~3 GB of CUDA libraries; the app
 # only uses the CPU, so take torch from PyTorch's CPU-only index there (Phase 10).
-# macOS and ARM Linux wheels on PyPI are already CPU-only.
+# That goes for ARM Linux too (the Azure B2pls_v2 and Docker on Apple silicon): PyPI's
+# aarch64 wheels bundle several GB of CUDA libraries. macOS wheels are CPU-only already.
 [tool.uv.sources]
-torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" }]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

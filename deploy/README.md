@@ -81,8 +81,10 @@ The last command prints a one-time password: send it to the admin privately. Fro
 they add their help documents (Knowledge base) and their team (Team) themselves. After a
 prospect's trial: `ops python -m scripts.tenants delete-tenant --slug acme --yes`.
 
-The production database starts empty: no demo data. Seed scripts are for local
-development only.
+The production database starts with no demo data. The migrations do create one empty
+business, `dev` (it held the data from before businesses existed); remove it with
+`ops python -m scripts.tenants delete-tenant --slug dev --yes`. Seed scripts are for
+local development only.
 
 ## Everyday operations
 
