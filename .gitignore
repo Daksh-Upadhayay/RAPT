@@ -92,3 +92,7 @@ Thumbs.db
 
 # Reviewer corrections exported from the database (real customer messages): scripts/export_feedback.py
 data/feedback/
+
+# Deployment secrets and database backups (Phase 10)
+deploy/.env
+deploy/backups/

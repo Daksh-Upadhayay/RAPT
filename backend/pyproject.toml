@@ -26,10 +26,22 @@ dependencies = [
     "scikit-learn>=1.9.0",
     "sentence-transformers>=6.0.1",
     "sqlalchemy[asyncio]>=2.0.52",
+    "torch>=2.14",
     "uvicorn>=0.52.4",
     "vadersentiment>=3.3.2",
     "xgboost>=3.4.1",
 ]
+
+# On x86-64 Linux the default PyPI torch wheel pulls in ~3 GB of CUDA libraries; the app
+# only uses the CPU, so take torch from PyTorch's CPU-only index there (Phase 10).
+# macOS and ARM Linux wheels on PyPI are already CPU-only.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,0 +1,14 @@
+# Keep secrets, local data and build output out of images
+**/.env
+**/.env.*
+!**/.env.example
+.git
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+frontend/dist
+data
+deploy/backups
+**/.DS_Store

@@ -1027,3 +1027,47 @@ the partners ask for.
   question" found the late-delivery section, invite a reviewer (one-time password
   shown), file a ticket for a new customer, and Groq's draft quoted the uploaded policy
   (carrier trace, update within 24 hours). The tenant was deleted afterwards.
+
+---
+
+## Phase 10 — Deployment
+
+### Where: one server, paid for by Azure for Students credit
+- **Constraint:** no paid services (the owner can't pay), and the app needs about 3 GB of
+  RAM (torch with two embedding models, the classifiers, Postgres).
+- **Options checked (September 2026):** Hugging Face Docker Spaces now need a paid plan;
+  Render and Koyeb free tiers are 512 MB with 0.1 CPU and sleep when idle; Vercel's free
+  plan is non-commercial only, times out at 10 s and can't hold torch; Oracle Always Free
+  (2 CPU / 12 GB ARM) is free but needs a card for a $1 identity hold and may reclaim idle
+  servers; Neon's free Postgres (pgvector, 0.5 GB) would suit a split setup.
+- **Decision:** Azure for Students ($100 credit, no card) paying for a 4 GB VM, preferably
+  Arm (`B2pls_v2`), roughly 3 months of credit. The free `B1s` (1 GB) is too small until
+  the models move to ONNX Runtime; that's the way to stay free for 12 months.
+- The design doesn't depend on Azure: any Linux server with ~4 GB and a public IP works.
+
+### How: Docker Compose on one host
+- `db` (pgvector/pgvector:pg17, no public port), `migrate` (creates `rapt_app`, runs
+  Alembic, exits), `api` (one uvicorn process), `web` (Caddy: static app + `/api` proxy +
+  automatic Let's Encrypt HTTPS), `backup` (nightly `pg_dump`, 14 days), `ops` (operator
+  CLI on demand).
+- **Same origin:** Caddy serves the app and proxies `/api`, so the session cookie is
+  first-party and no CORS is needed, like in development.
+- **Two database identities in production:** the owner (created by the Postgres image)
+  is only given to `migrate`, `ops` and `backup`; the API only ever gets `rapt_app`, so
+  RLS applies to it. `scripts/prod_setup.py` creates the role with its password.
+- **One API process** because the login rate limiter and run recovery are per process.
+- **Real client IPs:** uvicorn trusts `X-Forwarded-For` (`--proxy-headers`); without it
+  every request would come from Caddy and the per-IP login limit would lock everyone out
+  at once. The API port is only reachable on the compose network.
+- **Models baked into the image** and Hugging Face set offline: no downloads at startup.
+- **CPU-only torch on x86:** PyPI's Linux x86 torch pulls in ~3 GB of CUDA libraries, so
+  `pyproject.toml` takes torch from PyTorch's CPU index on x86 Linux only (Arm and macOS
+  wheels are CPU-only already).
+- **Secrets** live in `deploy/.env` on the server (gitignored, and `.dockerignore`
+  keeps every `.env` out of images).
+- **Headers:** HSTS, a strict Content-Security-Policy, `X-Frame-Options: DENY`, no
+  `Server` header. `GET /health` (database ping) serves Docker's healthcheck and any
+  uptime monitor.
+- **Server hardening** (`setup-server.sh`): ufw with 22/80/443 only, key-only SSH,
+  unattended security upgrades, a 2 GB swap file.
+- **Hostname:** a free DuckDNS subdomain unless the owner has a domain.

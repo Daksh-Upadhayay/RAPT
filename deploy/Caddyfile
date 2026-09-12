@@ -1,0 +1,29 @@
+# RAPT_DOMAIN: the public hostname (Caddy gets and renews its Let's Encrypt certificate).
+# Set it to "localhost" for a local test (a certificate from Caddy's own local CA).
+{$RAPT_DOMAIN} {
+	encode zstd gzip
+
+	# The API, same origin as the app: the session cookie stays first-party
+	handle_path /api/* {
+		reverse_proxy api:8000
+	}
+
+	# The single-page app: unknown paths serve index.html; hashed assets cache forever
+	handle {
+		root * /srv
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		-Server
+	}
+}

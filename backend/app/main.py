@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.agents.drafter import get_drafter
 from app.agents.recovery import resume_unfinished_runs
@@ -49,6 +51,17 @@ async def require_csrf_header(request: Request, call_next):
     if request.method not in SAFE_METHODS and request.headers.get(CSRF_HEADER) != "1":
         return JSONResponse({"detail": "Missing the X-RAPT-CSRF header."}, status_code=403)
     return await call_next(request)
+
+
+@app.get("/health", include_in_schema=False)
+async def health() -> JSONResponse:
+    """Liveness for Docker and uptime monitors: the process is up and the database answers."""
+    try:
+        async with SessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+    except (OSError, SQLAlchemyError):
+        return JSONResponse({"status": "database unavailable"}, status_code=503)
+    return JSONResponse({"status": "ok"})
 
 
 app.include_router(auth.router)
