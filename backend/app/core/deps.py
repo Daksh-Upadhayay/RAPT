@@ -26,6 +26,7 @@ class CurrentUser:
     id: uuid.UUID
     tenant_id: uuid.UUID
     tenant_name: str
+    tenant_slug: str
     email: str
     name: str
     role: UserRole
@@ -48,17 +49,17 @@ async def get_current_user(request: Request, factory: SessionFactoryDep) -> Curr
     async with tenant_session(factory, claims.tenant_id) as session:
         row = (
             await session.execute(
-                select(User, Tenant.name).join(Tenant, Tenant.id == User.tenant_id).where(User.id == claims.user_id)
+                select(User, Tenant.name, Tenant.slug).join(Tenant, Tenant.id == User.tenant_id).where(User.id == claims.user_id)
             )
         ).first()
     if row is None:
         raise _unauthorized("Your session has ended. Sign in again.")
-    user, tenant_name = row
+    user, tenant_name, tenant_slug = row
     # Tokens issued before a password reset (or for a deactivated user) no longer work
     if not user.is_active or user.tenant_id != claims.tenant_id or claims.issued_at < user.password_changed_at:
         raise _unauthorized("Your session has ended. Sign in again.")
     return CurrentUser(
-        id=user.id, tenant_id=user.tenant_id, tenant_name=tenant_name, email=user.email, name=user.name, role=UserRole(user.role)
+        id=user.id, tenant_id=user.tenant_id, tenant_name=tenant_name, tenant_slug=tenant_slug, email=user.email, name=user.name, role=UserRole(user.role)
     )
 
 

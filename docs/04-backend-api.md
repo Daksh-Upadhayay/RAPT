@@ -106,6 +106,19 @@ Reads are open to every signed-in user; changes are for tenant admins (Phase 9).
 - `PATCH /team/{id}` — `{role?, is_active?}`; an admin can't demote or deactivate themselves
 - `POST /team/{id}/reset-password` — a new one-time password; signs the member out
 
+### Public contact form (no account)
+- `GET /public/contact/{slug}` — `{business_name}`, or 404 when the business doesn't exist
+  or its form is off (the two look the same)
+- `POST /public/contact/{slug}` — `{name, email, subject, message, website}` from the
+  business's customer: finds or adds the customer by email, stores a ticket with
+  `channel = contact_form`, runs the agents; returns `{reference, business_name}` (202).
+  `website` is a honeypot: when filled, the answer looks the same but nothing is stored.
+  5 messages per visitor and 100 per business per hour (429 beyond).
+
+### Settings (tenant admins)
+- `GET /settings` — `{name, slug, contact_form_enabled}`
+- `PATCH /settings` — `{contact_form_enabled}`
+
 ### Customers (added in Phase 5, for the Submit Ticket form)
 - `POST /customers` — `{name, email}`: add a customer while filing their first ticket
   (Phase 9); 409 if the email exists in the tenant

@@ -25,7 +25,13 @@ ip_limiter = SlidingWindowLimiter(settings.login_attempts_per_window * 5, WINDOW
 
 def _me(user: CurrentUser) -> MeResponse:
     return MeResponse(
-        id=user.id, email=user.email, name=user.name, role=user.role, tenant_id=user.tenant_id, tenant_name=user.tenant_name
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        role=user.role,
+        tenant_id=user.tenant_id,
+        tenant_name=user.tenant_name,
+        tenant_slug=user.tenant_slug,
     )
 
 
@@ -46,10 +52,10 @@ async def login(data: LoginRequest, request: Request, response: Response, factor
     async with tenant_session(factory, found.tenant_id) as session:
         await session.execute(update(User).where(User.id == found.id).values(last_login_at=datetime.now(UTC)))
         user = (
-            await session.execute(select(User, Tenant.name).join(Tenant, Tenant.id == User.tenant_id).where(User.id == found.id))
+            await session.execute(select(User, Tenant.name, Tenant.slug).join(Tenant, Tenant.id == User.tenant_id).where(User.id == found.id))
         ).one()
         await session.commit()
-    account, tenant_name = user
+    account, tenant_name, tenant_slug = user
 
     email_limiter.reset(email)
     response.set_cookie(
@@ -68,6 +74,7 @@ async def login(data: LoginRequest, request: Request, response: Response, factor
         role=UserRole(account.role),
         tenant_id=account.tenant_id,
         tenant_name=tenant_name,
+        tenant_slug=tenant_slug,
     )
 
 

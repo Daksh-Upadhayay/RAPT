@@ -1,5 +1,5 @@
 import { CATEGORY_COLORS, CATEGORY_LABELS, STATUS_LABELS, URGENCY_LABELS } from '../../lib/format'
-import type { TicketCategory, TicketStatus, TicketUrgency } from '../../types'
+import type { TicketCategory, TicketChannel, TicketStatus, TicketUrgency } from '../../types'
 import { CheckIcon, CorrectedMark, FlagIcon, Spinner, Tag } from '../../ui'
 
 /** Category name with its fixed colour as a small key (colour never carries it alone). */
@@ -59,6 +59,10 @@ export function StatusTag({ status }: { status: TicketStatus }) {
     )
   }
   return <Tag tone="accent">{STATUS_LABELS.awaiting_review}</Tag>
+}
+
+export function ChannelTag({ channel }: { channel: TicketChannel }) {
+  return channel === 'contact_form' ? <Tag tone="muted">From contact form</Tag> : null
 }
 
 export function EscalationTag({ reason }: { reason?: string | null }) {

@@ -16,6 +16,8 @@ class Tenant(Base):
     id: Mapped[uuid.UUID] = uuid_pk()
     name: Mapped[str] = mapped_column(Text)
     slug: Mapped[str] = mapped_column(Text, unique=True)
+    # The public contact form at /contact/<slug> (off until an admin turns it on)
+    contact_form_enabled: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     created_at: Mapped[datetime] = created_at_column()
 
 

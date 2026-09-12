@@ -47,6 +47,7 @@ src/
     auth/          useSession, useLogin, useLogout, LoginForm, RequireSession, RequireAdmin, UserMenu
     knowledge/     AddDocuments (upload/paste), DocumentList (status, sections, edit), SearchPreview
     team/          TeamManager (invite with one-time password, roles, deactivate, reset)
+    contact/       ContactForm (the public page customers write from), ContactSettings
   pages/           thin: compose features into a screen, handle the URL
   app/             AppShell (header + nav), queryClient
   api/             fetch wrapper (client.ts) + one module per backend resource
@@ -70,7 +71,8 @@ carrier's tracking history.
 
 ## Signing in
 
-Every page except `/login` sits behind `RequireSession`. The session is an httpOnly
+Every page except `/login` and the public contact form (`/contact/<slug>`) sits behind
+`RequireSession`. The session is an httpOnly
 cookie set by `POST /auth/login`, so the app never sees the token; `useSession` reads
 `GET /auth/me`. Any 401 (expired, signed out elsewhere, password reset) marks the user
 signed out and sends them back to `/login?next=…`. Requests that change something carry

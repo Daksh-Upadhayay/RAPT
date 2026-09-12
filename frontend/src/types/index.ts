@@ -38,6 +38,9 @@ export type AgentName = (typeof AGENT_NAMES)[number]
 export const USER_ROLES = ['admin', 'reviewer'] as const
 export type UserRole = (typeof USER_ROLES)[number]
 
+export const TICKET_CHANNELS = ['staff', 'contact_form'] as const
+export type TicketChannel = (typeof TICKET_CHANNELS)[number]
+
 export const DOCUMENT_STATUSES = ['processing', 'ready', 'failed'] as const
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number]
 
@@ -58,6 +61,7 @@ export interface MeResponse {
   role: UserRole
   tenant_id: UUID
   tenant_name: string
+  tenant_slug: string
 }
 
 // --- Customers (app/schemas/customer.py) ---
@@ -104,6 +108,7 @@ export interface TicketResponse {
   category: TicketCategory | null
   urgency: TicketUrgency | null
   status: TicketStatus
+  channel: TicketChannel
   needs_escalation: boolean | null
   escalation_reason: string | null
   // A reviewer's correction of the triage; null = no correction (the model's label stands)
@@ -234,6 +239,35 @@ export interface MemberUpdate {
 export interface PasswordIssued {
   member: TeamMember
   one_time_password: string
+}
+
+// --- Public contact form and settings (app/schemas/public.py) ---
+
+export interface ContactFormInfo {
+  business_name: string
+}
+
+export interface ContactRequest {
+  name: string
+  email: string
+  subject: string
+  message: string
+  website?: string // honeypot: always empty from a person
+}
+
+export interface ContactReceipt {
+  reference: string
+  business_name: string
+}
+
+export interface TenantSettings {
+  name: string
+  slug: string
+  contact_form_enabled: boolean
+}
+
+export interface TenantSettingsUpdate {
+  contact_form_enabled: boolean
 }
 
 // --- Agent tool schemas (app/schemas/prediction.py, app/schemas/agents.py) ---

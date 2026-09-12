@@ -18,7 +18,8 @@ tenant's row. Customer email is unique per tenant. See DECISIONS.md, Phase 7.
 |---|---|---|
 | id | UUID PK | |
 | name | TEXT | the business's name |
-| slug | TEXT | unique; used by the operator CLI and scripts (`--tenant acme`) |
+| slug | TEXT | unique; used by the operator CLI, scripts and the contact form URL |
+| contact_form_enabled | BOOLEAN | default false; the public form at `/contact/<slug>` |
 | created_at | TIMESTAMPTZ | default now() |
 
 ### `users`
@@ -67,6 +68,7 @@ Mock e-commerce order data, seeded with Faker.
 | category | TEXT | nullable until triaged: `order_status`, `refund_request`, `damaged_item`, `delivery_delay`, `product_question`, `cancellation` |
 | urgency | TEXT | nullable until triaged: `low`, `medium`, `high` |
 | status | TEXT | `new`, `in_progress`, `awaiting_review`, `resolved` (no `escalated` — escalated tickets stay `awaiting_review`, see `needs_escalation`) |
+| channel | TEXT | `staff` (Submit a ticket) or `contact_form` (the business's customer) |
 | needs_escalation | BOOLEAN | nullable until the Escalation Agent runs |
 | escalation_reason | TEXT | nullable — which escalation rule fired |
 | corrected_category | TEXT | nullable — reviewer's category when it differs from the model's (Phase 6); same allowed values as `category` |

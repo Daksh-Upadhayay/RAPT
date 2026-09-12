@@ -52,6 +52,7 @@ export function AppShell() {
             <NavItem to="/knowledge">Knowledge base</NavItem>
             <NavItem to="/dashboard">Dashboard</NavItem>
             {me?.role === 'admin' && <NavItem to="/team">Team</NavItem>}
+            {me?.role === 'admin' && <NavItem to="/settings">Settings</NavItem>}
           </nav>
           <div className="ml-auto flex h-14 items-center sm:ml-0">
             <UserMenu />

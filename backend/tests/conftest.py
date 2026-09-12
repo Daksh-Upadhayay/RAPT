@@ -31,6 +31,7 @@ from app.core.tenancy import tenant_session
 from app.main import app
 from app.models import Base, Customer, Order, Tenant, User
 from app.routers.auth import email_limiter, ip_limiter
+from app.routers.public import business_limiter, visitor_limiter
 
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 PASSWORD = "correct horse battery staple"
@@ -74,8 +75,8 @@ def alembic_cfg() -> Config:
 
 @pytest.fixture(autouse=True)
 def reset_login_limits() -> None:
-    email_limiter.clear()
-    ip_limiter.clear()
+    for limiter in (email_limiter, ip_limiter, visitor_limiter, business_limiter):
+        limiter.clear()
 
 
 @pytest.fixture

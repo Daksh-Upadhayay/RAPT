@@ -1071,3 +1071,31 @@ the partners ask for.
 - **Server hardening** (`setup-server.sh`): ufw with 22/80/443 only, key-only SSH,
   unattended security upgrades, a 2 GB swap file.
 - **Hostname:** a free DuckDNS subdomain unless the owner has a domain.
+
+### Customer intake: a hosted contact form (added before deploying)
+- **Why now:** only a business's staff can sign in, so until now a customer's message
+  could only reach RAPT by staff typing it in. A public form lets a design partner's real
+  customers write in from a link on the business's website.
+- **Decision:** `/contact/<slug>`, a public page with name, email, subject and message,
+  no account. Off by default; an admin switches it on in Settings, which shows the link
+  to share. Tickets carry `channel = contact_form` and a "From contact form" tag.
+- **Tenant lookup without a session:** `contact_form_tenant(slug)`, a SECURITY DEFINER
+  function returning only the id and name, and only when the form is on, so an unknown
+  business and a switched-off form look the same. Everything after runs in that tenant's
+  scope, like a signed-in request.
+- **Spam and abuse:** a honeypot field (a filled one gets a normal-looking receipt and
+  nothing is stored), 5 messages per visitor and 100 per business per hour (protecting
+  the queue and the free LLM quota), strict field limits, and request bodies that forbid
+  unknown fields.
+- **Returning customers** are matched by email within the business. Anyone can type any
+  email, so a message can land on an existing customer's record; staff see it as a new
+  ticket. Verifying the email would need an email service (the next step).
+- **The receipt** shows a short reference (the first 8 characters of the ticket id), the
+  same one the ticket page shows, so staff and customer can talk about it.
+- **Not yet:** the approved reply isn't emailed to the customer; staff send it themselves
+  for now. Emailing it from a free sending service comes next, then an embeddable widget
+  that reuses this endpoint.
+- **Seen in the live check:** with an empty knowledge base, a draft promised a
+  replacement no policy states. The Draft Agent's prompt forbids that; it's a reason to
+  load a business's policies before switching its form on, and worth a stricter prompt
+  check later.

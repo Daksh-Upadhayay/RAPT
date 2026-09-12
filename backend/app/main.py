@@ -17,10 +17,12 @@ from app.routers import (
     knowledge_base,
     metrics,
     orders,
+    public,
     reviews,
     team,
     tickets,
 )
+from app.routers import settings as settings_router
 from app.services.knowledge_documents import resume_unfinished_documents
 
 
@@ -73,3 +75,5 @@ app.include_router(agents.router)
 app.include_router(reviews.router)
 app.include_router(metrics.router)
 app.include_router(team.router)
+app.include_router(settings_router.router)
+app.include_router(public.router)

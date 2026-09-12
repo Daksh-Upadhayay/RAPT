@@ -36,6 +36,11 @@ EXPECTED = {
     "InviteRequest",
     "MemberUpdate",
     "PasswordIssued",
+    "ContactFormInfo",
+    "ContactRequest",
+    "ContactReceipt",
+    "TenantSettings",
+    "TenantSettingsUpdate",
     "MetricsSummary",
     "CategoryCount",
     "DailyEscalation",
@@ -51,6 +56,7 @@ ENUM_CONSTANTS = {
     "UserRole": "USER_ROLES",
     "DocumentStatus": "DOCUMENT_STATUSES",
     "DocumentSource": "DOCUMENT_SOURCES",
+    "TicketChannel": "TICKET_CHANNELS",
 }
 
 

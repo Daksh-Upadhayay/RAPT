@@ -21,3 +21,4 @@ class MeResponse(BaseModel):
     role: UserRole
     tenant_id: UUID
     tenant_name: str
+    tenant_slug: str  # for the public contact form link

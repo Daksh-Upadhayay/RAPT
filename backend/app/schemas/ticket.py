@@ -4,7 +4,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.enums import AgentName, TicketCategory, TicketStatus, TicketUrgency
+from app.core.enums import (
+    AgentName,
+    TicketCategory,
+    TicketChannel,
+    TicketStatus,
+    TicketUrgency,
+)
 from app.schemas.order import OrderResponse
 
 
@@ -28,6 +34,7 @@ class TicketResponse(BaseModel):
     category: TicketCategory | None
     urgency: TicketUrgency | None
     status: TicketStatus
+    channel: TicketChannel  # staff (Submit a ticket) or contact_form (the business's customer)
     needs_escalation: bool | None
     escalation_reason: str | None
     # Reviewer's correction of the triage (null = no correction); see models/ticket.py

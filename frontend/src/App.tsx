@@ -4,9 +4,11 @@ import { AppShell } from './app/AppShell'
 import { RequireSession } from './features/auth'
 import { EmptyState, Loading } from './ui'
 import { AgentTrace } from './pages/AgentTrace'
+import { Contact } from './pages/Contact'
 import { Knowledge } from './pages/Knowledge'
 import { Login } from './pages/Login'
 import { ReviewQueue } from './pages/ReviewQueue'
+import { Settings } from './pages/Settings'
 import { SubmitTicket } from './pages/SubmitTicket'
 import { Team } from './pages/Team'
 import { TicketDetail } from './pages/TicketDetail'
@@ -28,6 +30,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="login" element={<Login />} />
+      {/* Public: a business's customers, no account */}
+      <Route path="contact/:slug" element={<Contact />} />
       {/* Everything else needs a session */}
       <Route element={<RequireSession />}>
         <Route element={<AppShell />}>
@@ -38,6 +42,7 @@ export default function App() {
           <Route path="tickets/:id/trace" element={<AgentTrace />} />
           <Route path="knowledge" element={<Knowledge />} />
           <Route path="team" element={<Team />} />
+          <Route path="settings" element={<Settings />} />
           <Route
             path="dashboard"
             element={

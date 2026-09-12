@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { effectiveCategory, effectiveUrgency, timeAgo } from '../../lib/format'
 import type { TicketResponse } from '../../types'
-import { CategoryTag, EscalationTag, StatusTag, UrgencyTag } from './tags'
+import { CategoryTag, ChannelTag, EscalationTag, StatusTag, UrgencyTag } from './tags'
 
 /**
  * One ticket in a list, shaped like a shipping label: its stickers on top, the subject in
@@ -21,6 +21,7 @@ export function TicketStrip({ ticket, showStatus = false }: { ticket: TicketResp
         {escalated && <EscalationTag reason={ticket.escalation_reason} />}
         <CategoryTag category={effectiveCategory(ticket)} corrected={ticket.corrected_category !== null} />
         <UrgencyTag urgency={effectiveUrgency(ticket)} corrected={ticket.corrected_urgency !== null} />
+        <ChannelTag channel={ticket.channel} />
         <time
           dateTime={ticket.created_at}
           title={new Date(ticket.created_at).toLocaleString()}

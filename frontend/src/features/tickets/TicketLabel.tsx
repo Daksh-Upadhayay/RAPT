@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { dateTime, effectiveCategory, effectiveUrgency, timeAgo } from '../../lib/format'
 import type { TicketResponse } from '../../types'
 import { BackLink } from '../../ui'
-import { CategoryTag, EscalationTag, StatusTag, UrgencyTag } from './tags'
+import { CategoryTag, ChannelTag, EscalationTag, StatusTag, UrgencyTag } from './tags'
 
 /**
  * The ticket's header, printed like a label's routing line: the subject in heavy
@@ -28,6 +28,7 @@ export function TicketLabel({ ticket, back, actions }: {
         {ticket.needs_escalation && <EscalationTag reason={ticket.escalation_reason} />}
         <CategoryTag category={effectiveCategory(ticket)} corrected={ticket.corrected_category !== null} />
         <UrgencyTag urgency={effectiveUrgency(ticket)} corrected={ticket.corrected_urgency !== null} />
+        <ChannelTag channel={ticket.channel} />
         {actions && <div className="flex w-full flex-wrap items-center gap-2 pt-1 sm:ml-auto sm:w-auto sm:pt-0">{actions}</div>}
       </div>
     </header>

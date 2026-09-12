@@ -64,3 +64,10 @@ class DocumentStatus(StrEnum):
 class DocumentSource(StrEnum):
     UPLOAD = "upload"
     PASTE = "paste"
+
+
+class TicketChannel(StrEnum):
+    """How a ticket reached RAPT."""
+
+    STAFF = "staff"  # filed by a signed-in user (Submit a ticket)
+    CONTACT_FORM = "contact_form"  # sent by the business's customer through the public form
