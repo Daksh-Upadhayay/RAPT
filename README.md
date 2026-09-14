@@ -31,9 +31,6 @@ against held-out test sets before a new version is promoted.
 - **Knowledge retrieval** (bge-small-en-v1.5 embeddings over pgvector): 0.88 hit@1,
   1.00 hit@3, 0.94 MRR
 
-See [docs/DECISIONS.md](docs/DECISIONS.md) for the full evaluation history, including
-baselines and caveats.
-
 ## Stack
 
 | Layer | Choice |
@@ -59,14 +56,3 @@ lookups (login, the public contact form) go through narrowly-scoped
 - Backend setup: [backend/README.md](backend/README.md)
 - Frontend setup: [frontend/README.md](frontend/README.md)
 - Production deployment: [deploy/README.md](deploy/README.md)
-- Architecture docs: [docs/](docs/)
-
-## Project docs
-
-- [docs/00-overview.md](docs/00-overview.md) — what this is and why
-- [docs/01-database-schema.md](docs/01-database-schema.md) — schema reference
-- [docs/02-ml-models.md](docs/02-ml-models.md) — classifier design
-- [docs/03-agent-architecture.md](docs/03-agent-architecture.md) — the agent graph
-- [docs/04-backend-api.md](docs/04-backend-api.md) — API reference
-- [docs/05-frontend.md](docs/05-frontend.md) — frontend structure
-- [docs/DECISIONS.md](docs/DECISIONS.md) — full build log and evaluation results

@@ -96,3 +96,6 @@ data/feedback/
 # Deployment secrets and database backups (Phase 10)
 deploy/.env
 deploy/backups/
+
+# Internal design docs (kept locally, not published)
+docs/
